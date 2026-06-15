@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="eu">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>HiTZordu</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">HiTZ</p>
+        <h1>HiTZordu</h1>
+      </div>
+      <div class="event-meta">
+        <label>
+          Bilera
+          <input id="event-title" value="Ikerketa taldeko bilera">
+        </label>
+        <label>
+          Iraupena
+          <select id="duration">
+            <option value="30">30 min</option>
+            <option value="60" selected>60 min</option>
+            <option value="90">90 min</option>
+          </select>
+        </label>
+      </div>
+    </header>
+
+    <main class="app-shell">
+      <aside class="side-panel">
+        <section class="panel-section">
+          <h2>Parte-hartzailea</h2>
+          <label>
+            Izena
+            <input id="participant-name" placeholder="Adib. Olatz">
+          </label>
+          <button id="add-participant" type="button">Gehitu</button>
+          <div id="participants" class="participants"></div>
+        </section>
+
+        <section class="panel-section">
+          <h2>Egoera</h2>
+          <div class="mode-control" role="radiogroup" aria-label="Erabilgarritasun egoera">
+            <button class="mode active" data-mode="available" type="button">Bai</button>
+            <button class="mode" data-mode="maybe" type="button">Behar izanez gero</button>
+            <button class="mode" data-mode="unavailable" type="button">Ezinezkoa</button>
+          </div>
+        </section>
+
+        <section class="panel-section">
+          <h2>Tarte onenak</h2>
+          <ol id="best-slots" class="best-slots"></ol>
+          <button id="export-ics" type="button">Egutegira esportatu</button>
+        </section>
+      </aside>
+
+      <section class="schedule-panel" aria-label="Erabilgarritasun sarea">
+        <div class="grid-toolbar">
+          <div>
+            <h2>Aukeratu orduak</h2>
+            <p id="active-person-label"></p>
+          </div>
+          <button id="reset-demo" type="button">Garbitu</button>
+        </div>
+        <div id="availability-grid" class="availability-grid"></div>
+      </section>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>
+
