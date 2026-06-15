@@ -338,7 +338,8 @@ function renderSummaryGrid(meeting) {
       slot.dataset.key = key;
       slot.dataset.score = slotScoreLabel(meeting, key);
       slot.tabIndex = 0;
-      slot.setAttribute("aria-label", `${column.label} ${time}: ${slotSummary(meeting, key)}`);
+      slot.title = slotTooltip(meeting, key);
+      slot.setAttribute("aria-label", `${column.label} ${time}: ${slotTooltip(meeting, key)}`);
       slot.addEventListener("click", () => selectSlot(key));
       slot.addEventListener("keydown", (event) => {
         if (event.key === "Enter" || event.key === " ") {
@@ -552,6 +553,19 @@ function slotResponseGroups(meeting, key) {
     },
     { available: [], maybe: [], unavailable: [] },
   );
+}
+
+function slotTooltip(meeting, key) {
+  const groups = slotResponseGroups(meeting, key);
+  return [
+    `Bai: ${formatNames(groups.available)}`,
+    `Behar izanez gero: ${formatNames(groups.maybe)}`,
+    `Ez / hutsik: ${formatNames(groups.unavailable)}`,
+  ].join("\n");
+}
+
+function formatNames(names) {
+  return names.length > 0 ? names.join(", ") : "-";
 }
 
 function personalSlotClass(participant, key) {
