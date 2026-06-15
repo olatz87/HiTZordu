@@ -9,15 +9,29 @@ baina bi hobekuntza nagusirekin:
   adierazteko.
 - Egutegira esportazioa, aukeratutako tarteak `.ics` fitxategi gisa gordetzeko.
 
-## Prototipoa
+## Martxan jartzea
 
-Oraingoz aplikazioa dependentziarik gabeko prototipo estatikoa da:
+Node.js 24 LTS behar da. `nvm` erabiliz:
 
-- `index.html`
-- `styles.css`
-- `app.js`
+```bash
+nvm use
+npm start
+```
 
-Ireki `index.html` nabigatzailean probatzeko.
+Aplikazioa hemen irekiko da:
+
+```text
+http://127.0.0.1:3000
+```
+
+Garapenean fitxategi-aldaketekin serverra automatikoki berrabiarazteko:
+
+```bash
+npm run dev
+```
+
+Frontend estatikoa oraindik zuzenean ireki daiteke, baina backend-a martxan badago
+aplikazioak datuak zerbitzarian gordeko ditu.
 
 ## Lehen funtzioak
 
@@ -30,11 +44,16 @@ Ireki `index.html` nabigatzailean probatzeko.
 - Taldearen laburpena ikustea.
 - Tarte onenak identifikatzea.
 - Tarte onenak `.ics` fitxategi gisa esportatzea.
-- Datuak nabigatzailean gordetzea `localStorage` bidez.
+- Datuak backend arinean gordetzea `data/event.json` fitxategian.
+- Backend gabe irekitzen bada, `localStorage` fallbacka erabiltzea.
 
 ## Garapen-oharrak
 
-Proiektuak ez du oraindik build tresnarik behar. Hurrengo pausoa backend arin bat
-aukeratzea izan daiteke, ekitaldiak partekatzeko esteka iraunkorrekin eta
-erantzunak zerbitzarian gordetzeko.
+Backend-a oraingoz Node-ren built-in `http` moduluarekin eginda dago, dependentziarik
+gabe. Hurrengo pausoa ekitaldi bat baino gehiago eta partekatzeko URL iraunkorrak
+modelatzea izango litzateke.
 
+## APIa
+
+- `GET /api/event`: uneko ekitaldia eta erantzunak irakurri.
+- `PUT /api/event`: ekitaldiaren egoera osoa gorde.

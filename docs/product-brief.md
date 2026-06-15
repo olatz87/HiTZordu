@@ -15,14 +15,15 @@ behin tartea aukeratuta, egutegira eramatea erraza izan behar da.
   - available
 - Local summary of group fit.
 - Calendar export through an `.ics` download.
+- Lightweight Node backend with JSON-file persistence.
 
 ## Not in scope yet
 
 - Authentication.
-- Server-side persistence.
 - Email invitations.
 - External calendar two-way sync.
 - Time zone collaboration across regions.
+- Multiple event URLs.
 
 ## Product decisions to revisit
 
@@ -31,4 +32,3 @@ behin tartea aukeratuta, egutegira eramatea erraza izan behar da.
   range.
 - Whether event owners can lock or hide responses.
 - Whether the app should be bilingual from the start.
-

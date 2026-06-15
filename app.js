@@ -39,9 +39,11 @@ const labels = {
 
 const storageKey = "hitzordu.prototype.v1";
 
-let state = loadState();
+let state = createDefaultState();
 let activeMode = "available";
 let isDragging = false;
+let backendAvailable = false;
+let saveTimer = null;
 
 const grid = document.querySelector("#availability-grid");
 const participantsEl = document.querySelector("#participants");
@@ -68,6 +70,7 @@ document.querySelectorAll(".mode").forEach((button) => {
     activeMode = button.dataset.mode;
     document.querySelectorAll(".mode").forEach((mode) => mode.classList.remove("active"));
     button.classList.add("active");
+    renderParticipants();
   });
 });
 
@@ -81,15 +84,31 @@ participantName.addEventListener("keydown", (event) => {
   }
 });
 
-render();
+init();
 
-function loadState() {
-  const saved = localStorage.getItem(storageKey);
-  if (saved) {
-    return JSON.parse(saved);
+async function init() {
+  state = await loadState();
+  render();
+}
+
+async function loadState() {
+  try {
+    const response = await fetch("/api/event");
+    if (response.ok) {
+      backendAvailable = true;
+      return await response.json();
+    }
+  } catch {
+    backendAvailable = false;
   }
 
+  const saved = localStorage.getItem(storageKey);
+  return saved ? JSON.parse(saved) : createDefaultState();
+}
+
+function createDefaultState() {
   return {
+    id: "local",
     title: "Ikerketa taldeko bilera",
     duration: 60,
     activeParticipantId: "p1",
@@ -122,7 +141,6 @@ function render() {
   renderParticipants();
   renderGrid();
   renderBestSlots();
-  saveState();
 }
 
 function renderParticipants() {
@@ -222,7 +240,7 @@ function addParticipant() {
     return;
   }
 
-  const id = `p${Date.now()}`;
+  const id = globalThis.crypto?.randomUUID ? `p-${crypto.randomUUID()}` : `p${Date.now()}`;
   state.participants.push({ id, name, availability: {} });
   state.activeParticipantId = id;
   participantName.value = "";
@@ -309,7 +327,7 @@ function exportCalendar() {
     const end = new Date(start.getTime() + state.duration * 60 * 1000);
     return [
       "BEGIN:VEVENT",
-      `UID:${crypto.randomUUID()}@hitzordu.local`,
+      `UID:${createId()}@hitzordu.local`,
       `DTSTAMP:${toIcsDate(new Date())}`,
       `DTSTART:${toIcsDate(start)}`,
       `DTEND:${toIcsDate(end)}`,
@@ -365,27 +383,48 @@ function slotKey(day, time) {
   return `${day}T${time}`;
 }
 
+function createId() {
+  return globalThis.crypto?.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`;
+}
+
 function getActiveParticipant() {
   return state.participants.find((participant) => participant.id === state.activeParticipantId);
 }
 
 function saveState() {
   localStorage.setItem(storageKey, JSON.stringify(state));
+  if (!backendAvailable) {
+    return;
+  }
+
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(async () => {
+    try {
+      const response = await fetch("/api/event", {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(state),
+      });
+      backendAvailable = response.ok;
+    } catch {
+      backendAvailable = false;
+    }
+  }, 120);
 }
 
 function saveAndRender() {
-  saveState();
   render();
+  saveState();
 }
 
-function resetData() {
+async function resetData() {
   localStorage.removeItem(storageKey);
-  state = loadState();
+  state = createDefaultState();
   activeMode = "available";
   document.querySelectorAll(".mode").forEach((mode) => {
     mode.classList.toggle("active", mode.dataset.mode === activeMode);
   });
-  render();
+  saveAndRender();
 }
 
 function slugify(text) {
@@ -394,4 +433,3 @@ function slugify(text) {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "") || "hitzordu";
 }
-
