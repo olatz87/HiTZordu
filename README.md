@@ -38,6 +38,7 @@ aplikazioak datuak zerbitzarian gordeko ditu.
 ## Lehen funtzioak
 
 - Parte-hartzaile izena sartzea.
+- Aplikazioa parte-hartzailerik gabe hastea, erabiltzaileak banaka gehitzeko.
 - Erabilgarritasuna hiru egoeratan markatzea:
   - Ezinezkoa
   - Behar izanez gero

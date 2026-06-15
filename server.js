@@ -178,48 +178,8 @@ function createDefaultEvent() {
     id: "default",
     title: "Ikerketa taldeko bilera",
     duration: 60,
-    activeParticipantId: "p1",
-    participants: [
-      { id: "p1", name: "Olatz", availability: seedAvailability("available", "maybe") },
-      { id: "p2", name: "Aitor", availability: seedAvailability("maybe", "unavailable") },
-      { id: "p3", name: "Miren", availability: seedAvailability("available", "unavailable") },
-    ],
+    activeParticipantId: null,
+    participants: [],
     updatedAt: new Date().toISOString(),
   };
-}
-
-function seedAvailability(primary, secondary) {
-  const availability = {};
-  const days = ["2026-06-22", "2026-06-23", "2026-06-24", "2026-06-25", "2026-06-26"];
-  const times = [
-    "09:00",
-    "09:30",
-    "10:00",
-    "10:30",
-    "11:00",
-    "11:30",
-    "12:00",
-    "12:30",
-    "13:00",
-    "13:30",
-    "14:00",
-    "14:30",
-    "15:00",
-    "15:30",
-    "16:00",
-    "16:30",
-  ];
-
-  days.forEach((day, dayIndex) => {
-    times.forEach((time, timeIndex) => {
-      const key = `${day}T${time}`;
-      if ((dayIndex + timeIndex) % 5 === 0) {
-        availability[key] = secondary;
-      } else if (timeIndex > 1 && timeIndex < 11 && dayIndex !== 4) {
-        availability[key] = primary;
-      }
-    });
-  });
-
-  return availability;
 }

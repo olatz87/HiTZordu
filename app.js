@@ -111,28 +111,9 @@ function createDefaultState() {
     id: "local",
     title: "Ikerketa taldeko bilera",
     duration: 60,
-    activeParticipantId: "p1",
-    participants: [
-      { id: "p1", name: "Olatz", availability: seedAvailability("available", "maybe") },
-      { id: "p2", name: "Aitor", availability: seedAvailability("maybe", "unavailable") },
-      { id: "p3", name: "Miren", availability: seedAvailability("available", "unavailable") },
-    ],
+    activeParticipantId: null,
+    participants: [],
   };
-}
-
-function seedAvailability(primary, secondary) {
-  const availability = {};
-  days.forEach((day, dayIndex) => {
-    times.forEach((time, timeIndex) => {
-      const key = slotKey(day.key, time);
-      if ((dayIndex + timeIndex) % 5 === 0) {
-        availability[key] = secondary;
-      } else if (timeIndex > 1 && timeIndex < 11 && dayIndex !== 4) {
-        availability[key] = primary;
-      }
-    });
-  });
-  return availability;
 }
 
 function render() {
@@ -219,6 +200,13 @@ function renderBestSlots() {
   const bestSlots = rankSlots().slice(0, 5);
   bestSlotsEl.innerHTML = "";
 
+  if (bestSlots.length === 0) {
+    const item = document.createElement("li");
+    item.textContent = "Oraindik ez dago erantzunik.";
+    bestSlotsEl.append(item);
+    return;
+  }
+
   bestSlots.forEach((slot) => {
     const item = document.createElement("li");
     item.textContent = `${formatSlot(slot.key)} - ${slot.available} bai, ${slot.maybe} behar izanez gero`;
@@ -280,10 +268,11 @@ function slotClass(key) {
 
 function slotScoreLabel(key) {
   const summary = summarizeSlot(key);
-  if (summary.score === 0) {
+  const positiveResponses = summary.available + summary.maybe;
+  if (positiveResponses === 0 || state.participants.length === 0) {
     return "";
   }
-  return `${summary.score}/${state.participants.length * 2}`;
+  return `${positiveResponses}/${state.participants.length}`;
 }
 
 function slotSummary(key) {
