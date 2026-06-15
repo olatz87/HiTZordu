@@ -18,6 +18,8 @@ nvm use
 npm start
 ```
 
+Kontuz: bigarren komandoa `npm start` da, ez `nvm start`.
+
 Aplikazioa hemen irekiko da:
 
 ```text
