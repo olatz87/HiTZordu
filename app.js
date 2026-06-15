@@ -4,15 +4,23 @@ const stateRank = {
   available: 2,
 };
 
-const labels = {
-  maybe: "Behar izanez gero",
-  available: "Bai",
-};
+const weekdays = [
+  { key: "weekday-1", short: "Al", long: "Astelehena" },
+  { key: "weekday-2", short: "Ar", long: "Asteartea" },
+  { key: "weekday-3", short: "Az", long: "Asteazkena" },
+  { key: "weekday-4", short: "Og", long: "Osteguna" },
+  { key: "weekday-5", short: "Or", long: "Ostirala" },
+  { key: "weekday-6", short: "Lr", long: "Larunbata" },
+  { key: "weekday-0", short: "Ig", long: "Igandea" },
+];
 
-const storageKey = "hitzordu.store.v2";
+const storageKey = "hitzordu.store.v3";
 
 let store = createDefaultStore();
+let draftMode = "dated";
 let draftDates = [];
+let draftWeekdays = weekdays.slice(0, 5).map((day) => day.key);
+let calendarMonth = startOfMonth(new Date());
 let backendAvailable = false;
 let saveTimer = null;
 
@@ -28,18 +36,32 @@ const participantPanel = document.querySelector("#participant-panel");
 const bestPanel = document.querySelector("#best-panel");
 const scheduleTitle = document.querySelector("#schedule-title");
 const meetingTitle = document.querySelector("#meeting-title");
-const meetingDate = document.querySelector("#meeting-date");
 const selectedDatesEl = document.querySelector("#selected-dates");
 const startTime = document.querySelector("#start-time");
 const endTime = document.querySelector("#end-time");
 const durationInput = document.querySelector("#duration");
+const modeButtons = document.querySelectorAll("[data-meeting-mode]");
+const datedChooser = document.querySelector("#dated-chooser");
+const weeklyChooser = document.querySelector("#weekly-chooser");
+const calendarTitle = document.querySelector("#calendar-title");
+const calendarGrid = document.querySelector("#calendar-grid");
+const weekdayChoices = document.querySelector("#weekday-choices");
+const exportButton = document.querySelector("#export-ics");
 
 document.querySelector("#new-meeting").addEventListener("click", showSetup);
-document.querySelector("#add-date").addEventListener("click", addDraftDate);
 document.querySelector("#create-meeting").addEventListener("click", createMeeting);
 document.querySelector("#add-participant").addEventListener("click", addParticipant);
 document.querySelector("#clear-meeting").addEventListener("click", clearActiveMeetingResponses);
-document.querySelector("#export-ics").addEventListener("click", exportCalendar);
+document.querySelector("#prev-month").addEventListener("click", () => changeCalendarMonth(-1));
+document.querySelector("#next-month").addEventListener("click", () => changeCalendarMonth(1));
+exportButton.addEventListener("click", exportCalendar);
+
+modeButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    draftMode = button.dataset.meetingMode;
+    renderSetupMode();
+  });
+});
 
 participantName.addEventListener("keydown", (event) => {
   if (event.key === "Enter") {
@@ -47,18 +69,12 @@ participantName.addEventListener("keydown", (event) => {
   }
 });
 
-meetingDate.addEventListener("keydown", (event) => {
-  if (event.key === "Enter") {
-    addDraftDate();
-  }
-});
-
 init();
 
 async function init() {
   fillTimeSelects();
-  meetingDate.value = toDateInputValue(new Date());
   store = await loadStore();
+  renderWeekdayChoices();
   render();
 }
 
@@ -87,13 +103,14 @@ function createDefaultStore() {
 function render() {
   const meeting = getActiveMeeting();
   renderMeetings();
-  renderDraftDates();
+  renderSetupMode();
   renderParticipants(meeting);
   renderBestSlots(meeting);
   renderPanels(meeting);
 
   if (meeting) {
     scheduleTitle.textContent = meeting.title;
+    exportButton.disabled = meeting.kind === "weekly";
     renderGrid(meeting);
   } else {
     grid.innerHTML = "";
@@ -123,7 +140,7 @@ function renderMeetings() {
     button.type = "button";
     button.className = "meeting-item";
     button.classList.toggle("active", meeting.id === store.activeMeetingId);
-    button.innerHTML = `<strong>${escapeHtml(meeting.title)}</strong><span>${meeting.dates.length} egun, ${meeting.startTime}-${meeting.endTime}</span>`;
+    button.innerHTML = `<strong>${escapeHtml(meeting.title)}</strong><span>${meetingSummary(meeting)}</span>`;
     button.addEventListener("click", () => {
       store.activeMeetingId = meeting.id;
       saveAndRender();
@@ -132,13 +149,57 @@ function renderMeetings() {
   });
 }
 
+function renderSetupMode() {
+  modeButtons.forEach((button) => {
+    button.classList.toggle("active", button.dataset.meetingMode === draftMode);
+  });
+  datedChooser.hidden = draftMode !== "dated";
+  weeklyChooser.hidden = draftMode !== "weekly";
+  renderCalendar();
+  renderDraftDates();
+  renderWeekdayChoices();
+}
+
+function renderCalendar() {
+  calendarTitle.textContent = new Intl.DateTimeFormat("eu", {
+    month: "long",
+    year: "numeric",
+  }).format(calendarMonth);
+  calendarGrid.innerHTML = "";
+
+  weekdays.forEach((day) => {
+    const header = document.createElement("div");
+    header.className = "calendar-weekday";
+    header.textContent = day.short;
+    calendarGrid.append(header);
+  });
+
+  const firstDayOffset = (calendarMonth.getDay() + 6) % 7;
+  const daysInMonth = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1, 0).getDate();
+
+  for (let index = 0; index < firstDayOffset; index += 1) {
+    calendarGrid.append(createCell("", "calendar-empty"));
+  }
+
+  for (let day = 1; day <= daysInMonth; day += 1) {
+    const date = toDateInputValue(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth(), day));
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "calendar-day";
+    button.classList.toggle("selected", draftDates.includes(date));
+    button.textContent = String(day);
+    button.addEventListener("click", () => toggleDraftDate(date));
+    calendarGrid.append(button);
+  }
+}
+
 function renderDraftDates() {
   selectedDatesEl.innerHTML = "";
 
   if (draftDates.length === 0) {
     const empty = document.createElement("p");
     empty.className = "muted";
-    empty.textContent = "Gehitu gutxienez egun bat.";
+    empty.textContent = "Klikatu egutegiko egunak.";
     selectedDatesEl.append(empty);
     return;
   }
@@ -148,11 +209,28 @@ function renderDraftDates() {
     chip.type = "button";
     chip.className = "date-chip";
     chip.textContent = `${formatDate(date)} x`;
-    chip.addEventListener("click", () => {
-      draftDates = draftDates.filter((item) => item !== date);
-      renderDraftDates();
-    });
+    chip.addEventListener("click", () => toggleDraftDate(date));
     selectedDatesEl.append(chip);
+  });
+}
+
+function renderWeekdayChoices() {
+  weekdayChoices.innerHTML = "";
+
+  weekdays.forEach((day) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "weekday-choice";
+    button.classList.toggle("selected", draftWeekdays.includes(day.key));
+    button.textContent = day.long;
+    button.addEventListener("click", () => {
+      draftWeekdays = draftWeekdays.includes(day.key)
+        ? draftWeekdays.filter((item) => item !== day.key)
+        : [...draftWeekdays, day.key];
+      draftWeekdays.sort(compareWeekdays);
+      renderWeekdayChoices();
+    });
+    weekdayChoices.append(button);
   });
 }
 
@@ -194,25 +272,25 @@ function renderParticipants(meeting) {
 }
 
 function renderGrid(meeting) {
-  const dates = meeting.dates;
+  const columns = meetingColumns(meeting);
   const times = buildTimes(meeting.startTime, meeting.endTime);
-  grid.style.setProperty("--day-count", dates.length);
+  grid.style.setProperty("--day-count", columns.length);
   grid.innerHTML = "";
   grid.append(createCell("", "grid-cell header corner"));
 
-  dates.forEach((date) => {
-    grid.append(createCell(formatDate(date), "grid-cell header"));
+  columns.forEach((column) => {
+    grid.append(createCell(column.label, "grid-cell header"));
   });
 
   times.forEach((time) => {
     grid.append(createCell(time, "grid-cell time"));
-    dates.forEach((date) => {
-      const key = slotKey(date, time);
+    columns.forEach((column) => {
+      const key = slotKey(column.key, time);
       const slot = createCell("", `grid-cell slot ${slotClass(meeting, key)}`);
       slot.dataset.key = key;
       slot.dataset.score = slotScoreLabel(meeting, key);
       slot.tabIndex = 0;
-      slot.setAttribute("aria-label", `${formatDate(date)} ${time}: ${slotSummary(meeting, key)}`);
+      slot.setAttribute("aria-label", `${column.label} ${time}: ${slotSummary(meeting, key)}`);
       slot.addEventListener("click", () => cycleSlot(meeting, key));
       slot.addEventListener("keydown", (event) => {
         if (event.key === "Enter" || event.key === " ") {
@@ -242,7 +320,7 @@ function renderBestSlots(meeting) {
 
   bestSlots.forEach((slot) => {
     const item = document.createElement("li");
-    item.textContent = `${formatSlot(slot.key)} - ${slot.available} bai, ${slot.maybe} behar izanez gero`;
+    item.textContent = `${formatSlot(meeting, slot.key)} - ${slot.available} bai, ${slot.maybe} behar izanez gero`;
     bestSlotsEl.append(item);
   });
 }
@@ -250,19 +328,24 @@ function renderBestSlots(meeting) {
 function showSetup() {
   store.activeMeetingId = null;
   draftDates = [];
+  draftWeekdays = weekdays.slice(0, 5).map((day) => day.key);
+  draftMode = "dated";
+  calendarMonth = startOfMonth(new Date());
   meetingTitle.value = "";
-  meetingDate.value = toDateInputValue(new Date());
   saveAndRender();
 }
 
-function addDraftDate() {
-  const date = meetingDate.value;
-  if (!date || draftDates.includes(date)) {
-    return;
-  }
-
-  draftDates = [...draftDates, date].sort();
+function toggleDraftDate(date) {
+  draftDates = draftDates.includes(date)
+    ? draftDates.filter((item) => item !== date)
+    : [...draftDates, date].sort();
+  renderCalendar();
   renderDraftDates();
+}
+
+function changeCalendarMonth(delta) {
+  calendarMonth = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + delta, 1);
+  renderCalendar();
 }
 
 function createMeeting() {
@@ -272,8 +355,8 @@ function createMeeting() {
     return;
   }
 
-  if (draftDates.length === 0) {
-    meetingDate.focus();
+  const selected = draftMode === "dated" ? draftDates : draftWeekdays;
+  if (selected.length === 0) {
     return;
   }
 
@@ -284,9 +367,11 @@ function createMeeting() {
 
   const meeting = {
     id: createId(),
+    kind: draftMode,
     title,
     duration: Number(durationInput.value),
-    dates: [...draftDates],
+    dates: draftMode === "dated" ? [...draftDates] : [],
+    weekdays: draftMode === "weekly" ? [...draftWeekdays] : [],
     startTime: startTime.value,
     endTime: endTime.value,
     activeParticipantId: null,
@@ -413,8 +498,8 @@ function summarizeSlot(meeting, key) {
 }
 
 function rankSlots(meeting) {
-  return meeting.dates
-    .flatMap((date) => buildTimes(meeting.startTime, meeting.endTime).map((time) => ({ key: slotKey(date, time) })))
+  return meetingColumns(meeting)
+    .flatMap((column) => buildTimes(meeting.startTime, meeting.endTime).map((time) => ({ key: slotKey(column.key, time) })))
     .map((slot) => ({ ...slot, ...summarizeSlot(meeting, slot.key) }))
     .filter((slot) => slot.score > 0)
     .sort((a, b) => b.score - a.score || b.available - a.available || a.key.localeCompare(b.key));
@@ -422,7 +507,7 @@ function rankSlots(meeting) {
 
 function exportCalendar() {
   const meeting = getActiveMeeting();
-  if (!meeting) {
+  if (!meeting || meeting.kind === "weekly") {
     return;
   }
 
@@ -484,6 +569,26 @@ function buildTimes(start, end) {
   return times;
 }
 
+function meetingColumns(meeting) {
+  if (meeting.kind === "weekly") {
+    return meeting.weekdays.map((key) => ({
+      key,
+      label: weekdays.find((day) => day.key === key)?.long || key,
+    }));
+  }
+
+  return meeting.dates.map((date) => ({
+    key: date,
+    label: formatDate(date),
+  }));
+}
+
+function meetingSummary(meeting) {
+  const count = meeting.kind === "weekly" ? meeting.weekdays.length : meeting.dates.length;
+  const unit = meeting.kind === "weekly" ? "asteko egun" : "egun";
+  return `${count} ${unit}, ${meeting.startTime}-${meeting.endTime}`;
+}
+
 function createCell(text, className) {
   const cell = document.createElement("div");
   cell.className = className;
@@ -509,9 +614,12 @@ function escapeIcsText(text) {
   return text.replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\n/g, "\\n");
 }
 
-function formatSlot(key) {
-  const [date, time] = key.split("T");
-  return `${formatDate(date)}, ${time}`;
+function formatSlot(meeting, key) {
+  const [column, time] = key.split("T");
+  const label = meeting.kind === "weekly"
+    ? weekdays.find((day) => day.key === column)?.long || column
+    : formatDate(column);
+  return `${label}, ${time}`;
 }
 
 function formatDate(date) {
@@ -525,6 +633,10 @@ function formatDate(date) {
 function parseDate(date) {
   const [year, month, day] = date.split("-").map(Number);
   return new Date(year, month - 1, day);
+}
+
+function startOfMonth(date) {
+  return new Date(date.getFullYear(), date.getMonth(), 1);
 }
 
 function toDateInputValue(date) {
@@ -549,6 +661,10 @@ function minutesToTime(minutes) {
   const hours = Math.floor(normalized / 60);
   const mins = normalized % 60;
   return `${String(hours).padStart(2, "0")}:${String(mins).padStart(2, "0")}`;
+}
+
+function compareWeekdays(a, b) {
+  return weekdays.findIndex((day) => day.key === a) - weekdays.findIndex((day) => day.key === b);
 }
 
 function createId() {

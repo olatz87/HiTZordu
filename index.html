@@ -67,14 +67,25 @@
             </label>
           </div>
 
-          <div class="date-row">
-            <label>
-              Eguna
-              <input id="meeting-date" type="date">
-            </label>
-            <button id="add-date" type="button">Eguna gehitu</button>
+          <div class="mode-switch" role="group" aria-label="Bilera mota">
+            <button class="active" data-meeting-mode="dated" type="button">Data zehatzak</button>
+            <button data-meeting-mode="weekly" type="button">Bilera orokorra</button>
           </div>
-          <div id="selected-dates" class="selected-dates"></div>
+
+          <div id="dated-chooser" class="date-picker">
+            <div class="calendar-toolbar">
+              <button id="prev-month" type="button" aria-label="Aurreko hilabetea">&lt;</button>
+              <h3 id="calendar-title"></h3>
+              <button id="next-month" type="button" aria-label="Hurrengo hilabetea">&gt;</button>
+            </div>
+            <div id="calendar-grid" class="calendar-grid"></div>
+            <div id="selected-dates" class="selected-dates"></div>
+          </div>
+
+          <div id="weekly-chooser" class="weekday-picker" hidden>
+            <div id="weekday-choices" class="weekday-choices"></div>
+          </div>
+
           <button id="create-meeting" class="primary-action" type="button">Bilera sortu</button>
         </div>
       </section>

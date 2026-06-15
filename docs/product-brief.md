@@ -11,7 +11,9 @@ behin tartea aukeratuta, egutegira eramatea erraza izan behar da.
 - Multiple meeting definitions.
 - Meeting setup before availability collection:
   - title
-  - possible dates
+  - dated or weekly meeting mode
+  - possible dates through a clickable calendar
+  - weekdays for general meetings without specific dates
   - start and end time
   - duration
 - Three availability states per participant:

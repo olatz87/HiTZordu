@@ -142,11 +142,15 @@ function normalizeMeeting(meeting) {
   }
 
   const title = cleanText(meeting.title, "");
+  const kind = meeting.kind === "weekly" ? "weekly" : "dated";
   const dates = Array.isArray(meeting.dates)
     ? [...new Set(meeting.dates.filter(isDateString))].sort()
     : [];
+  const weekdays = Array.isArray(meeting.weekdays)
+    ? [...new Set(meeting.weekdays.filter(isWeekdayKey))].sort(compareWeekdays)
+    : [];
 
-  if (!title || dates.length === 0) {
+  if (!title || (kind === "dated" && dates.length === 0) || (kind === "weekly" && weekdays.length === 0)) {
     return null;
   }
 
@@ -159,9 +163,11 @@ function normalizeMeeting(meeting) {
 
   return {
     id: typeof meeting.id === "string" ? meeting.id : randomUUID(),
+    kind,
     title,
     duration: [30, 60, 90].includes(Number(meeting.duration)) ? Number(meeting.duration) : 60,
-    dates,
+    dates: kind === "dated" ? dates : [],
+    weekdays: kind === "weekly" ? weekdays : [],
     startTime: isTimeString(meeting.startTime) ? meeting.startTime : "09:00",
     endTime: isTimeString(meeting.endTime) ? meeting.endTime : "17:00",
     activeParticipantId,
@@ -219,4 +225,17 @@ function isDateString(value) {
 
 function isTimeString(value) {
   return typeof value === "string" && /^([01]\d|2[0-4]):[0-5]\d$/.test(value);
+}
+
+function isWeekdayKey(value) {
+  return typeof value === "string" && /^weekday-[0-6]$/.test(value);
+}
+
+function compareWeekdays(a, b) {
+  return weekdayIndex(a) - weekdayIndex(b);
+}
+
+function weekdayIndex(value) {
+  const day = Number(value.replace("weekday-", ""));
+  return day === 0 ? 7 : day;
 }

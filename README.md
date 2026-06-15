@@ -38,7 +38,10 @@ aplikazioak datuak zerbitzarian gordeko ditu.
 ## Lehen funtzioak
 
 - Bilera bat baino gehiago kudeatzea.
-- Bilera sortu aurretik izena, egunak, hasiera, amaiera eta iraupena finkatzea.
+- Bilera sortu aurretik izena, mota, hasiera, amaiera eta iraupena finkatzea.
+- Bi bilera mota:
+  - data zehatzak, hilabeteko egutegian klik eginez hautatzeko.
+  - bilera orokorra, data zehatzik gabe asteko egunak aukeratzeko.
 - Parte-hartzaile izena sartzea.
 - Aplikazioa parte-hartzailerik gabe hastea, erabiltzaileak banaka gehitzeko.
 - Erabilgarritasuna klik-ziklo batekin markatzea:
@@ -48,6 +51,7 @@ aplikazioak datuak zerbitzarian gordeko ditu.
 - Taldearen laburpena ikustea.
 - Tarte onenak identifikatzea.
 - Tarte onenak `.ics` fitxategi gisa esportatzea.
+  - Oraingoz esportazioa data zehatzetako bileretan bakarrik dago gaituta.
 - Datuak backend arinean gordetzea `data/store.json` fitxategian.
 - Backend gabe irekitzen bada, `localStorage` fallbacka erabiltzea.
 
