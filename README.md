@@ -38,6 +38,8 @@ aplikazioak datuak zerbitzarian gordeko ditu.
 ## Lehen funtzioak
 
 - Bilera bat baino gehiago kudeatzea.
+- Bilera bakoitzerako partekatzeko esteka sortzea (`?meeting=...`), taldeko kideek
+  euren erantzunak bete ditzaten.
 - Bilera sortu aurretik izena, mota, hasiera, amaiera eta iraupena finkatzea.
 - Bi bilera mota:
   - data zehatzak, hilabeteko egutegian klik eginez hautatzeko.

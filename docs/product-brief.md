@@ -9,6 +9,7 @@ behin tartea aukeratuta, egutegira eramatea erraza izan behar da.
 ## Scope for the first prototype
 
 - Multiple meeting definitions.
+- Shareable URL per meeting for external participants.
 - Meeting setup before availability collection:
   - title
   - dated or weekly meeting mode
@@ -31,7 +32,7 @@ behin tartea aukeratuta, egutegira eramatea erraza izan behar da.
 - Email invitations.
 - External calendar two-way sync.
 - Time zone collaboration across regions.
-- Public share URLs per meeting.
+- Access control for public share URLs.
 
 ## Product decisions to revisit
 

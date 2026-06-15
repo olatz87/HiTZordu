@@ -25,7 +25,6 @@ let selectedSlotKey = null;
 let backendAvailable = false;
 let saveTimer = null;
 
-const meetingsEl = document.querySelector("#meetings");
 const participantsEl = document.querySelector("#participants");
 const participantName = document.querySelector("#participant-name");
 const activePersonLabel = document.querySelector("#active-person-label");
@@ -34,6 +33,7 @@ const personalGrid = document.querySelector("#personal-grid");
 const summaryGrid = document.querySelector("#summary-grid");
 const setupPanel = document.querySelector("#setup-panel");
 const schedulePanel = document.querySelector("#schedule-panel");
+const sharePanel = document.querySelector("#share-panel");
 const participantPanel = document.querySelector("#participant-panel");
 const bestPanel = document.querySelector("#best-panel");
 const slotDetailsPanel = document.querySelector("#slot-details-panel");
@@ -52,6 +52,8 @@ const weekdayChoices = document.querySelector("#weekday-choices");
 const exportButton = document.querySelector("#export-ics");
 const slotDetailsTitle = document.querySelector("#slot-details-title");
 const slotDetails = document.querySelector("#slot-details");
+const shareLink = document.querySelector("#share-link");
+const copyShareLink = document.querySelector("#copy-share-link");
 
 document.querySelector("#new-meeting").addEventListener("click", showSetup);
 document.querySelector("#create-meeting").addEventListener("click", createMeeting);
@@ -60,6 +62,7 @@ document.querySelector("#clear-meeting").addEventListener("click", clearActiveMe
 document.querySelector("#prev-month").addEventListener("click", () => changeCalendarMonth(-1));
 document.querySelector("#next-month").addEventListener("click", () => changeCalendarMonth(1));
 exportButton.addEventListener("click", exportCalendar);
+copyShareLink.addEventListener("click", copyCurrentShareLink);
 
 modeButtons.forEach((button) => {
   button.addEventListener("click", () => {
@@ -79,6 +82,7 @@ init();
 async function init() {
   fillTimeSelects();
   store = await loadStore();
+  applyMeetingFromUrl();
   renderWeekdayChoices();
   render();
 }
@@ -107,7 +111,7 @@ function createDefaultStore() {
 
 function render() {
   const meeting = getActiveMeeting();
-  renderMeetings();
+  renderShareLink(meeting);
   renderSetupMode();
   renderParticipants(meeting);
   renderBestSlots(meeting);
@@ -127,35 +131,14 @@ function render() {
 function renderPanels(meeting) {
   setupPanel.hidden = Boolean(meeting);
   schedulePanel.hidden = !meeting;
+  sharePanel.hidden = !meeting;
   participantPanel.hidden = !meeting;
   bestPanel.hidden = !meeting;
   slotDetailsPanel.hidden = !meeting;
 }
 
-function renderMeetings() {
-  meetingsEl.innerHTML = "";
-
-  if (store.meetings.length === 0) {
-    const empty = document.createElement("p");
-    empty.className = "muted";
-    empty.textContent = "Ez dago bilerarik oraindik.";
-    meetingsEl.append(empty);
-    return;
-  }
-
-  store.meetings.forEach((meeting) => {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "meeting-item";
-    button.classList.toggle("active", meeting.id === store.activeMeetingId);
-    button.innerHTML = `<strong>${escapeHtml(meeting.title)}</strong><span>${meetingSummary(meeting)}</span>`;
-    button.addEventListener("click", () => {
-      store.activeMeetingId = meeting.id;
-      selectedSlotKey = null;
-      saveAndRender();
-    });
-    meetingsEl.append(button);
-  });
+function renderShareLink(meeting) {
+  shareLink.value = meeting ? meetingShareUrl(meeting.id) : "";
 }
 
 function renderSetupMode() {
@@ -414,6 +397,7 @@ function renderSlotDetails(meeting) {
 function showSetup() {
   store.activeMeetingId = null;
   selectedSlotKey = null;
+  setMeetingUrl(null);
   draftDates = [];
   draftWeekdays = weekdays.slice(0, 5).map((day) => day.key);
   draftMode = "dated";
@@ -468,6 +452,7 @@ function createMeeting() {
   store.meetings.push(meeting);
   store.activeMeetingId = meeting.id;
   selectedSlotKey = null;
+  setMeetingUrl(meeting.id);
   draftDates = [];
   saveAndRender();
 }
@@ -721,10 +706,45 @@ function meetingColumns(meeting) {
   }));
 }
 
-function meetingSummary(meeting) {
-  const count = meeting.kind === "weekly" ? meeting.weekdays.length : meeting.dates.length;
-  const unit = meeting.kind === "weekly" ? "asteko egun" : "egun";
-  return `${count} ${unit}, ${meeting.startTime}-${meeting.endTime}`;
+function applyMeetingFromUrl() {
+  const meetingId = new URLSearchParams(window.location.search).get("meeting");
+  if (!meetingId) {
+    store.activeMeetingId = null;
+    return;
+  }
+
+  store.activeMeetingId = store.meetings.some((meeting) => meeting.id === meetingId) ? meetingId : null;
+}
+
+function meetingShareUrl(meetingId) {
+  const url = new URL(window.location.href);
+  url.searchParams.set("meeting", meetingId);
+  return url.toString();
+}
+
+function setMeetingUrl(meetingId) {
+  const url = new URL(window.location.href);
+  if (meetingId) {
+    url.searchParams.set("meeting", meetingId);
+  } else {
+    url.searchParams.delete("meeting");
+  }
+  window.history.pushState({}, "", url);
+}
+
+async function copyCurrentShareLink() {
+  if (!shareLink.value) {
+    return;
+  }
+
+  shareLink.select();
+  try {
+    if (navigator.clipboard) {
+      await navigator.clipboard.writeText(shareLink.value);
+    }
+  } catch {
+    // The selected text still lets the user copy manually in restricted browsers.
+  }
 }
 
 function createCell(text, className) {
@@ -848,11 +868,4 @@ function slugify(text) {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "") || "hitzordu";
-}
-
-function escapeHtml(text) {
-  return text.replace(/[&<>"']/g, (char) => {
-    const entities = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
-    return entities[char];
-  });
 }

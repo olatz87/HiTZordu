@@ -133,26 +133,11 @@ h2 {
   gap: 8px;
 }
 
-.meetings,
 .selected-dates {
   display: grid;
   gap: 8px;
 }
 
-.meeting-item {
-  display: grid;
-  gap: 4px;
-  min-height: 54px;
-  padding: 10px;
-  text-align: left;
-}
-
-.meeting-item.active {
-  border-color: var(--accent);
-  box-shadow: inset 3px 0 0 var(--accent);
-}
-
-.meeting-item span,
 .muted {
   color: var(--muted);
   font-size: 0.84rem;
@@ -416,7 +401,7 @@ h2 {
 
 .availability-grid {
   display: grid;
-  grid-template-columns: 76px repeat(var(--day-count, 1), minmax(112px, 1fr));
+  grid-template-columns: 56px repeat(var(--day-count, 1), minmax(118px, 1fr));
   overflow: auto;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -426,7 +411,7 @@ h2 {
 }
 
 .grid-cell {
-  min-width: 112px;
+  min-width: 0;
   min-height: 34px;
   border-right: 1px solid var(--line);
   border-bottom: 1px solid var(--line);
@@ -447,15 +432,22 @@ h2 {
 
 .grid-cell.header {
   top: 0;
+  min-width: 118px;
 }
 
 .grid-cell.time {
   left: 0;
+  min-width: 56px;
 }
 
 .grid-cell.corner {
   left: 0;
+  min-width: 56px;
   z-index: 3;
+}
+
+.slot {
+  min-width: 118px;
 }
 
 .slot {
@@ -516,7 +508,6 @@ h2 {
     flex-direction: column;
   }
 
-  .event-meta,
   .setup-grid,
   .mode-switch,
   .availability-layout,
@@ -530,10 +521,16 @@ h2 {
   }
 
   .availability-grid {
-    grid-template-columns: 68px repeat(var(--day-count, 1), minmax(96px, 1fr));
+    grid-template-columns: 52px repeat(var(--day-count, 1), minmax(96px, 1fr));
   }
 
-  .grid-cell {
+  .grid-cell.header,
+  .slot {
     min-width: 96px;
+  }
+
+  .grid-cell.time,
+  .grid-cell.corner {
+    min-width: 52px;
   }
 }
