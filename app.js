@@ -30,7 +30,8 @@ const participantsEl = document.querySelector("#participants");
 const participantName = document.querySelector("#participant-name");
 const activePersonLabel = document.querySelector("#active-person-label");
 const bestSlotsEl = document.querySelector("#best-slots");
-const grid = document.querySelector("#availability-grid");
+const personalGrid = document.querySelector("#personal-grid");
+const summaryGrid = document.querySelector("#summary-grid");
 const setupPanel = document.querySelector("#setup-panel");
 const schedulePanel = document.querySelector("#schedule-panel");
 const participantPanel = document.querySelector("#participant-panel");
@@ -116,9 +117,10 @@ function render() {
   if (meeting) {
     scheduleTitle.textContent = meeting.title;
     exportButton.disabled = meeting.kind === "weekly";
-    renderGrid(meeting);
+    renderGrids(meeting);
   } else {
-    grid.innerHTML = "";
+    personalGrid.innerHTML = "";
+    summaryGrid.innerHTML = "";
   }
 }
 
@@ -278,27 +280,32 @@ function renderParticipants(meeting) {
     : "Gehitu parte-hartzaile bat orduak markatzeko";
 }
 
-function renderGrid(meeting) {
+function renderGrids(meeting) {
+  renderPersonalGrid(meeting);
+  renderSummaryGrid(meeting);
+}
+
+function renderPersonalGrid(meeting) {
   const columns = meetingColumns(meeting);
   const times = buildTimes(meeting.startTime, meeting.endTime);
-  grid.style.setProperty("--day-count", columns.length);
-  grid.innerHTML = "";
-  grid.append(createCell("", "grid-cell header corner"));
+  const active = getActiveParticipant(meeting);
+  personalGrid.style.setProperty("--day-count", columns.length);
+  personalGrid.innerHTML = "";
+  personalGrid.append(createCell("", "grid-cell header corner"));
 
   columns.forEach((column) => {
-    grid.append(createCell(column.label, "grid-cell header"));
+    personalGrid.append(createCell(column.label, "grid-cell header"));
   });
 
   times.forEach((time) => {
-    grid.append(createCell(time, "grid-cell time"));
+    personalGrid.append(createCell(time, "grid-cell time"));
     columns.forEach((column) => {
       const key = slotKey(column.key, time);
-      const slot = createCell("", `grid-cell slot ${slotClass(meeting, key)}`);
+      const slot = createCell("", `grid-cell slot ${personalSlotClass(active, key)}`);
       slot.classList.toggle("selected", key === selectedSlotKey);
       slot.dataset.key = key;
-      slot.dataset.score = slotScoreLabel(meeting, key);
       slot.tabIndex = 0;
-      slot.setAttribute("aria-label", `${column.label} ${time}: ${slotSummary(meeting, key)}`);
+      slot.setAttribute("aria-label", `${column.label} ${time}: ${personalSlotSummary(active, key)}`);
       slot.addEventListener("click", () => cycleSlot(meeting, key));
       slot.addEventListener("keydown", (event) => {
         if (event.key === "Enter" || event.key === " ") {
@@ -306,7 +313,40 @@ function renderGrid(meeting) {
           cycleSlot(meeting, key);
         }
       });
-      grid.append(slot);
+      personalGrid.append(slot);
+    });
+  });
+}
+
+function renderSummaryGrid(meeting) {
+  const columns = meetingColumns(meeting);
+  const times = buildTimes(meeting.startTime, meeting.endTime);
+  summaryGrid.style.setProperty("--day-count", columns.length);
+  summaryGrid.innerHTML = "";
+  summaryGrid.append(createCell("", "grid-cell header corner"));
+
+  columns.forEach((column) => {
+    summaryGrid.append(createCell(column.label, "grid-cell header"));
+  });
+
+  times.forEach((time) => {
+    summaryGrid.append(createCell(time, "grid-cell time"));
+    columns.forEach((column) => {
+      const key = slotKey(column.key, time);
+      const slot = createCell("", `grid-cell slot ${summarySlotClass(meeting, key)}`);
+      slot.classList.toggle("selected", key === selectedSlotKey);
+      slot.dataset.key = key;
+      slot.dataset.score = slotScoreLabel(meeting, key);
+      slot.tabIndex = 0;
+      slot.setAttribute("aria-label", `${column.label} ${time}: ${slotSummary(meeting, key)}`);
+      slot.addEventListener("click", () => selectSlot(key));
+      slot.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          selectSlot(key);
+        }
+      });
+      summaryGrid.append(slot);
     });
   });
 }
@@ -492,6 +532,11 @@ function cycleSlot(meeting, key) {
   saveAndRender();
 }
 
+function selectSlot(key) {
+  selectedSlotKey = key;
+  render();
+}
+
 function slotResponseGroups(meeting, key) {
   return meeting.participants.reduce(
     (groups, participant) => {
@@ -509,16 +554,18 @@ function slotResponseGroups(meeting, key) {
   );
 }
 
-function slotClass(meeting, key) {
-  const active = getActiveParticipant(meeting);
-  const ownValue = active?.availability[key];
+function personalSlotClass(participant, key) {
+  const ownValue = participant?.availability[key];
   if (ownValue === "available") {
     return "available";
   }
   if (ownValue === "maybe") {
     return "maybe";
   }
+  return "unavailable";
+}
 
+function summarySlotClass(meeting, key) {
   const summary = summarizeSlot(meeting, key);
   if (summary.available > 0 && summary.maybe > 0) {
     return "mixed";
@@ -530,6 +577,17 @@ function slotClass(meeting, key) {
     return "maybe-faint";
   }
   return "unavailable";
+}
+
+function personalSlotSummary(participant, key) {
+  const value = participant?.availability[key];
+  if (value === "available") {
+    return "Bai";
+  }
+  if (value === "maybe") {
+    return "Behar izanez gero";
+  }
+  return "Hutsik";
 }
 
 function slotScoreLabel(meeting, key) {

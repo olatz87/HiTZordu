@@ -398,6 +398,22 @@ h2 {
   background: var(--unavailable);
 }
 
+.availability-layout {
+  display: grid;
+  grid-template-columns: minmax(320px, 1fr) minmax(320px, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.availability-column {
+  min-width: 0;
+}
+
+.availability-column h3 {
+  margin: 0 0 8px;
+  font-size: 0.94rem;
+}
+
 .availability-grid {
   display: grid;
   grid-template-columns: 76px repeat(var(--day-count, 1), minmax(112px, 1fr));
@@ -503,6 +519,7 @@ h2 {
   .event-meta,
   .setup-grid,
   .mode-switch,
+  .availability-layout,
   .app-shell {
     grid-template-columns: 1fr;
   }
