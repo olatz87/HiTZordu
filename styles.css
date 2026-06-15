@@ -446,6 +446,10 @@ h2 {
   z-index: 3;
 }
 
+.grid-cell.gap-before {
+  border-left: 4px double #9da8b2;
+}
+
 .slot {
   min-width: 118px;
 }

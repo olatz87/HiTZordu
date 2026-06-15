@@ -50,6 +50,8 @@ aplikazioak datuak zerbitzarian gordeko ditu.
   - lehen klika: Bai
   - bigarren klika: Behar izanez gero
   - hirugarren klika: Hutsik
+- Klik egin eta gora edo behera arrastatuz egoera bera tarte jarraietan margotzea.
+- Egunak jarraian ez daudenean egutegiko zutabeak bereizle bikoitzarekin markatzea.
 - Taldearen laburpena ikustea.
 - Tarte onenak identifikatzea.
 - Tarte onenak `.ics` fitxategi gisa esportatzea.

@@ -22,6 +22,7 @@ let draftDates = [];
 let draftWeekdays = weekdays.slice(0, 5).map((day) => day.key);
 let calendarMonth = startOfMonth(new Date());
 let selectedSlotKey = null;
+let dragPaintState = null;
 let backendAvailable = false;
 let saveTimer = null;
 
@@ -75,6 +76,14 @@ participantName.addEventListener("keydown", (event) => {
   if (event.key === "Enter") {
     addParticipant();
   }
+});
+
+window.addEventListener("pointerup", () => {
+  dragPaintState = null;
+});
+
+window.addEventListener("pointercancel", () => {
+  dragPaintState = null;
 });
 
 init();
@@ -276,20 +285,31 @@ function renderPersonalGrid(meeting) {
   personalGrid.innerHTML = "";
   personalGrid.append(createCell("", "grid-cell header corner"));
 
-  columns.forEach((column) => {
-    personalGrid.append(createCell(column.label, "grid-cell header"));
+  columns.forEach((column, index) => {
+    const className = `grid-cell header${hasColumnGap(meeting, columns, index) ? " gap-before" : ""}`;
+    personalGrid.append(createCell(column.label, className));
   });
 
   times.forEach((time) => {
     personalGrid.append(createCell(time, "grid-cell time"));
-    columns.forEach((column) => {
+    columns.forEach((column, index) => {
       const key = slotKey(column.key, time);
-      const slot = createCell("", `grid-cell slot ${personalSlotClass(active, key)}`);
+      const gapClass = hasColumnGap(meeting, columns, index) ? " gap-before" : "";
+      const slot = createCell("", `grid-cell slot ${personalSlotClass(active, key)}${gapClass}`);
       slot.classList.toggle("selected", key === selectedSlotKey);
       slot.dataset.key = key;
       slot.tabIndex = 0;
       slot.setAttribute("aria-label", `${column.label} ${time}: ${personalSlotSummary(active, key)}`);
-      slot.addEventListener("click", () => cycleSlot(meeting, key));
+      slot.addEventListener("pointerdown", (event) => {
+        if (event.button !== 0) {
+          return;
+        }
+        event.preventDefault();
+        beginPaintSlot(meeting, key);
+      });
+      slot.addEventListener("pointerenter", () => {
+        paintSlot(meeting, key);
+      });
       slot.addEventListener("keydown", (event) => {
         if (event.key === "Enter" || event.key === " ") {
           event.preventDefault();
@@ -308,15 +328,17 @@ function renderSummaryGrid(meeting) {
   summaryGrid.innerHTML = "";
   summaryGrid.append(createCell("", "grid-cell header corner"));
 
-  columns.forEach((column) => {
-    summaryGrid.append(createCell(column.label, "grid-cell header"));
+  columns.forEach((column, index) => {
+    const className = `grid-cell header${hasColumnGap(meeting, columns, index) ? " gap-before" : ""}`;
+    summaryGrid.append(createCell(column.label, className));
   });
 
   times.forEach((time) => {
     summaryGrid.append(createCell(time, "grid-cell time"));
-    columns.forEach((column) => {
+    columns.forEach((column, index) => {
       const key = slotKey(column.key, time);
-      const slot = createCell("", `grid-cell slot ${summarySlotClass(meeting, key)}`);
+      const gapClass = hasColumnGap(meeting, columns, index) ? " gap-before" : "";
+      const slot = createCell("", `grid-cell slot ${summarySlotClass(meeting, key)}${gapClass}`);
       slot.classList.toggle("selected", key === selectedSlotKey);
       slot.dataset.key = key;
       slot.dataset.score = slotScoreLabel(meeting, key);
@@ -518,6 +540,46 @@ function cycleSlot(meeting, key) {
   saveAndRender();
 }
 
+function beginPaintSlot(meeting, key) {
+  const active = getActiveParticipant(meeting);
+  if (!active) {
+    participantName.focus();
+    return;
+  }
+
+  dragPaintState = nextAvailability(active.availability[key]);
+  paintSlot(meeting, key);
+}
+
+function paintSlot(meeting, key) {
+  if (dragPaintState === null) {
+    return;
+  }
+
+  const active = getActiveParticipant(meeting);
+  if (!active) {
+    return;
+  }
+
+  selectedSlotKey = key;
+  if (dragPaintState) {
+    active.availability[key] = dragPaintState;
+  } else {
+    delete active.availability[key];
+  }
+  saveAndRender();
+}
+
+function nextAvailability(current) {
+  if (!current || current === "unavailable") {
+    return "available";
+  }
+  if (current === "available") {
+    return "maybe";
+  }
+  return "";
+}
+
 function selectSlot(key) {
   selectedSlotKey = key;
   render();
@@ -706,6 +768,22 @@ function meetingColumns(meeting) {
   }));
 }
 
+function hasColumnGap(meeting, columns, index) {
+  if (index === 0) {
+    return false;
+  }
+
+  return columnOrderValue(meeting, columns[index].key) - columnOrderValue(meeting, columns[index - 1].key) > 1;
+}
+
+function columnOrderValue(meeting, key) {
+  if (meeting.kind === "weekly") {
+    return weekdayOrder(key);
+  }
+
+  return Math.round(parseDate(key).getTime() / 86_400_000);
+}
+
 function applyMeetingFromUrl() {
   const meetingId = new URLSearchParams(window.location.search).get("meeting");
   if (!meetingId) {
@@ -822,7 +900,11 @@ function minutesToTime(minutes) {
 }
 
 function compareWeekdays(a, b) {
-  return weekdays.findIndex((day) => day.key === a) - weekdays.findIndex((day) => day.key === b);
+  return weekdayOrder(a) - weekdayOrder(b);
+}
+
+function weekdayOrder(key) {
+  return weekdays.findIndex((day) => day.key === key);
 }
 
 function createId() {
