@@ -8,11 +8,17 @@ behin tartea aukeratuta, egutegira eramatea erraza izan behar da.
 
 ## Scope for the first prototype
 
-- One shared event grid.
+- Multiple meeting definitions.
+- Meeting setup before availability collection:
+  - title
+  - possible dates
+  - start and end time
+  - duration
 - Three availability states per participant:
   - unavailable
   - if-need-be
   - available
+- Cell click cycle: available, if-need-be, clear.
 - Local summary of group fit.
 - Calendar export through an `.ics` download.
 - Lightweight Node backend with JSON-file persistence.
@@ -23,7 +29,7 @@ behin tartea aukeratuta, egutegira eramatea erraza izan behar da.
 - Email invitations.
 - External calendar two-way sync.
 - Time zone collaboration across regions.
-- Multiple event URLs.
+- Public share URLs per meeting.
 
 ## Product decisions to revisit
 

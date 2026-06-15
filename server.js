@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 
 const rootDir = fileURLToPath(new URL(".", import.meta.url));
 const dataDir = join(rootDir, "data");
-const eventFile = join(dataDir, "event.json");
+const storeFile = join(dataDir, "store.json");
 const port = Number(process.env.PORT || 3000);
 const host = process.env.HOST || "127.0.0.1";
 const staticFiles = new Map([
@@ -21,15 +21,14 @@ const contentTypes = {
   ".css": "text/css; charset=utf-8",
   ".html": "text/html; charset=utf-8",
   ".js": "text/javascript; charset=utf-8",
-  ".json": "application/json; charset=utf-8",
 };
 
-await ensureEventFile();
+await ensureStoreFile();
 
 const server = createServer(async (request, response) => {
   try {
-    if (request.url?.startsWith("/api/event")) {
-      await handleEventApi(request, response);
+    if (request.url?.startsWith("/api/state")) {
+      await handleStateApi(request, response);
       return;
     }
 
@@ -44,17 +43,17 @@ server.listen(port, host, () => {
   console.log(`HiTZordu listening on http://${host}:${port}`);
 });
 
-async function handleEventApi(request, response) {
+async function handleStateApi(request, response) {
   if (request.method === "GET") {
-    sendJson(response, 200, await readEvent());
+    sendJson(response, 200, await readStore());
     return;
   }
 
   if (request.method === "PUT") {
     const body = await readJsonBody(request);
-    const event = normalizeEvent(body);
-    await writeEvent(event);
-    sendJson(response, 200, event);
+    const store = normalizeStore(body);
+    await writeStore(store);
+    sendJson(response, 200, store);
     return;
   }
 
@@ -85,28 +84,32 @@ async function serveStatic(request, response) {
   stream.pipe(response);
 }
 
-async function ensureEventFile() {
+async function ensureStoreFile() {
   await mkdir(dataDir, { recursive: true });
   try {
-    await readEvent();
+    await readStore();
   } catch {
-    await writeEvent(createDefaultEvent());
+    await writeStore(createDefaultStore());
   }
 }
 
-async function readEvent() {
-  return JSON.parse(await readFile(eventFile, "utf8"));
+async function readStore() {
+  const store = normalizeStore(JSON.parse(await readFile(storeFile, "utf8")));
+  await writeStore(store);
+  return store;
 }
 
-async function writeEvent(event) {
-  await writeFile(eventFile, `${JSON.stringify(event, null, 2)}\n`);
+async function writeStore(store) {
+  await writeFile(storeFile, `${JSON.stringify(store, null, 2)}\n`);
 }
 
 async function readJsonBody(request) {
   const chunks = [];
+  let size = 0;
   for await (const chunk of request) {
     chunks.push(chunk);
-    if (Buffer.concat(chunks).byteLength > 1_000_000) {
+    size += chunk.byteLength;
+    if (size > 1_000_000) {
       throw new Error("Request body too large");
     }
   }
@@ -118,20 +121,51 @@ function sendJson(response, status, payload) {
   response.end(JSON.stringify(payload));
 }
 
-function normalizeEvent(input) {
-  const fallback = createDefaultEvent();
+function normalizeStore(input) {
+  const meetings = Array.isArray(input.meetings)
+    ? input.meetings.map(normalizeMeeting).filter(Boolean)
+    : [];
+  const activeMeetingId = meetings.some((meeting) => meeting.id === input.activeMeetingId)
+    ? input.activeMeetingId
+    : meetings[0]?.id || null;
+
   return {
-    id: typeof input.id === "string" ? input.id : fallback.id,
-    title: cleanText(input.title, fallback.title),
-    duration: [30, 60, 90].includes(Number(input.duration)) ? Number(input.duration) : fallback.duration,
-    activeParticipantId:
-      typeof input.activeParticipantId === "string" || input.activeParticipantId === null
-        ? input.activeParticipantId
-        : fallback.activeParticipantId,
-    participants: Array.isArray(input.participants)
-      ? input.participants.map(normalizeParticipant).filter(Boolean)
-      : fallback.participants,
+    activeMeetingId,
+    meetings,
     updatedAt: new Date().toISOString(),
+  };
+}
+
+function normalizeMeeting(meeting) {
+  if (!meeting || typeof meeting !== "object") {
+    return null;
+  }
+
+  const title = cleanText(meeting.title, "");
+  const dates = Array.isArray(meeting.dates)
+    ? [...new Set(meeting.dates.filter(isDateString))].sort()
+    : [];
+
+  if (!title || dates.length === 0) {
+    return null;
+  }
+
+  const participants = Array.isArray(meeting.participants)
+    ? meeting.participants.map(normalizeParticipant).filter(Boolean)
+    : [];
+  const activeParticipantId = participants.some((participant) => participant.id === meeting.activeParticipantId)
+    ? meeting.activeParticipantId
+    : participants[0]?.id || null;
+
+  return {
+    id: typeof meeting.id === "string" ? meeting.id : randomUUID(),
+    title,
+    duration: [30, 60, 90].includes(Number(meeting.duration)) ? Number(meeting.duration) : 60,
+    dates,
+    startTime: isTimeString(meeting.startTime) ? meeting.startTime : "09:00",
+    endTime: isTimeString(meeting.endTime) ? meeting.endTime : "17:00",
+    activeParticipantId,
+    participants,
   };
 }
 
@@ -146,7 +180,7 @@ function normalizeParticipant(participant) {
   }
 
   return {
-    id: typeof participant.id === "string" ? participant.id : `p-${randomUUID()}`,
+    id: typeof participant.id === "string" ? participant.id : randomUUID(),
     name,
     availability: normalizeAvailability(participant.availability),
   };
@@ -158,9 +192,7 @@ function normalizeAvailability(availability) {
   }
 
   return Object.fromEntries(
-    Object.entries(availability).filter(([, value]) =>
-      ["available", "maybe", "unavailable"].includes(value),
-    ),
+    Object.entries(availability).filter(([, value]) => ["available", "maybe"].includes(value)),
   );
 }
 
@@ -173,13 +205,18 @@ function cleanText(value, fallback) {
   return trimmed ? trimmed.slice(0, 120) : fallback;
 }
 
-function createDefaultEvent() {
+function createDefaultStore() {
   return {
-    id: "default",
-    title: "Ikerketa taldeko bilera",
-    duration: 60,
-    activeParticipantId: null,
-    participants: [],
+    activeMeetingId: null,
+    meetings: [],
     updatedAt: new Date().toISOString(),
   };
+}
+
+function isDateString(value) {
+  return typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value);
+}
+
+function isTimeString(value) {
+  return typeof value === "string" && /^([01]\d|2[0-4]):[0-5]\d$/.test(value);
 }

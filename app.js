@@ -1,30 +1,3 @@
-const days = [
-  { key: "2026-06-22", label: "Astelehena 22" },
-  { key: "2026-06-23", label: "Asteartea 23" },
-  { key: "2026-06-24", label: "Asteazkena 24" },
-  { key: "2026-06-25", label: "Osteguna 25" },
-  { key: "2026-06-26", label: "Ostirala 26" },
-];
-
-const times = [
-  "09:00",
-  "09:30",
-  "10:00",
-  "10:30",
-  "11:00",
-  "11:30",
-  "12:00",
-  "12:30",
-  "13:00",
-  "13:30",
-  "14:00",
-  "14:30",
-  "15:00",
-  "15:30",
-  "16:00",
-  "16:30",
-];
-
 const stateRank = {
   unavailable: 0,
   maybe: 1,
@@ -32,51 +5,41 @@ const stateRank = {
 };
 
 const labels = {
-  unavailable: "Ezinezkoa",
   maybe: "Behar izanez gero",
   available: "Bai",
 };
 
-const storageKey = "hitzordu.prototype.v1";
+const storageKey = "hitzordu.store.v2";
 
-let state = createDefaultState();
-let activeMode = "available";
-let isDragging = false;
+let store = createDefaultStore();
+let draftDates = [];
 let backendAvailable = false;
 let saveTimer = null;
 
-const grid = document.querySelector("#availability-grid");
+const meetingsEl = document.querySelector("#meetings");
 const participantsEl = document.querySelector("#participants");
 const participantName = document.querySelector("#participant-name");
 const activePersonLabel = document.querySelector("#active-person-label");
 const bestSlotsEl = document.querySelector("#best-slots");
-const titleInput = document.querySelector("#event-title");
+const grid = document.querySelector("#availability-grid");
+const setupPanel = document.querySelector("#setup-panel");
+const schedulePanel = document.querySelector("#schedule-panel");
+const participantPanel = document.querySelector("#participant-panel");
+const bestPanel = document.querySelector("#best-panel");
+const scheduleTitle = document.querySelector("#schedule-title");
+const meetingTitle = document.querySelector("#meeting-title");
+const meetingDate = document.querySelector("#meeting-date");
+const selectedDatesEl = document.querySelector("#selected-dates");
+const startTime = document.querySelector("#start-time");
+const endTime = document.querySelector("#end-time");
 const durationInput = document.querySelector("#duration");
 
+document.querySelector("#new-meeting").addEventListener("click", showSetup);
+document.querySelector("#add-date").addEventListener("click", addDraftDate);
+document.querySelector("#create-meeting").addEventListener("click", createMeeting);
 document.querySelector("#add-participant").addEventListener("click", addParticipant);
-document.querySelector("#reset-demo").addEventListener("click", resetData);
+document.querySelector("#clear-meeting").addEventListener("click", clearActiveMeetingResponses);
 document.querySelector("#export-ics").addEventListener("click", exportCalendar);
-titleInput.addEventListener("input", (event) => {
-  state.title = event.target.value.trim() || "HiTZordu bilera";
-  saveAndRender();
-});
-durationInput.addEventListener("change", (event) => {
-  state.duration = Number(event.target.value);
-  saveAndRender();
-});
-
-document.querySelectorAll(".mode").forEach((button) => {
-  button.addEventListener("click", () => {
-    activeMode = button.dataset.mode;
-    document.querySelectorAll(".mode").forEach((mode) => mode.classList.remove("active"));
-    button.classList.add("active");
-    renderParticipants();
-  });
-});
-
-window.addEventListener("pointerup", () => {
-  isDragging = false;
-});
 
 participantName.addEventListener("keydown", (event) => {
   if (event.key === "Enter") {
@@ -84,16 +47,24 @@ participantName.addEventListener("keydown", (event) => {
   }
 });
 
+meetingDate.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    addDraftDate();
+  }
+});
+
 init();
 
 async function init() {
-  state = await loadState();
+  fillTimeSelects();
+  meetingDate.value = toDateInputValue(new Date());
+  store = await loadStore();
   render();
 }
 
-async function loadState() {
+async function loadStore() {
   try {
-    const response = await fetch("/api/event");
+    const response = await fetch("/api/state");
     if (response.ok) {
       backendAvailable = true;
       return await response.json();
@@ -103,42 +74,106 @@ async function loadState() {
   }
 
   const saved = localStorage.getItem(storageKey);
-  return saved ? JSON.parse(saved) : createDefaultState();
+  return saved ? JSON.parse(saved) : createDefaultStore();
 }
 
-function createDefaultState() {
+function createDefaultStore() {
   return {
-    id: "local",
-    title: "Ikerketa taldeko bilera",
-    duration: 60,
-    activeParticipantId: null,
-    participants: [],
+    activeMeetingId: null,
+    meetings: [],
   };
 }
 
 function render() {
-  titleInput.value = state.title;
-  durationInput.value = String(state.duration);
-  renderParticipants();
-  renderGrid();
-  renderBestSlots();
+  const meeting = getActiveMeeting();
+  renderMeetings();
+  renderDraftDates();
+  renderParticipants(meeting);
+  renderBestSlots(meeting);
+  renderPanels(meeting);
+
+  if (meeting) {
+    scheduleTitle.textContent = meeting.title;
+    renderGrid(meeting);
+  } else {
+    grid.innerHTML = "";
+  }
 }
 
-function renderParticipants() {
+function renderPanels(meeting) {
+  setupPanel.hidden = Boolean(meeting);
+  schedulePanel.hidden = !meeting;
+  participantPanel.hidden = !meeting;
+  bestPanel.hidden = !meeting;
+}
+
+function renderMeetings() {
+  meetingsEl.innerHTML = "";
+
+  if (store.meetings.length === 0) {
+    const empty = document.createElement("p");
+    empty.className = "muted";
+    empty.textContent = "Ez dago bilerarik oraindik.";
+    meetingsEl.append(empty);
+    return;
+  }
+
+  store.meetings.forEach((meeting) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "meeting-item";
+    button.classList.toggle("active", meeting.id === store.activeMeetingId);
+    button.innerHTML = `<strong>${escapeHtml(meeting.title)}</strong><span>${meeting.dates.length} egun, ${meeting.startTime}-${meeting.endTime}</span>`;
+    button.addEventListener("click", () => {
+      store.activeMeetingId = meeting.id;
+      saveAndRender();
+    });
+    meetingsEl.append(button);
+  });
+}
+
+function renderDraftDates() {
+  selectedDatesEl.innerHTML = "";
+
+  if (draftDates.length === 0) {
+    const empty = document.createElement("p");
+    empty.className = "muted";
+    empty.textContent = "Gehitu gutxienez egun bat.";
+    selectedDatesEl.append(empty);
+    return;
+  }
+
+  draftDates.forEach((date) => {
+    const chip = document.createElement("button");
+    chip.type = "button";
+    chip.className = "date-chip";
+    chip.textContent = `${formatDate(date)} x`;
+    chip.addEventListener("click", () => {
+      draftDates = draftDates.filter((item) => item !== date);
+      renderDraftDates();
+    });
+    selectedDatesEl.append(chip);
+  });
+}
+
+function renderParticipants(meeting) {
   participantsEl.innerHTML = "";
 
-  state.participants.forEach((participant) => {
+  if (!meeting) {
+    activePersonLabel.textContent = "";
+    return;
+  }
+
+  meeting.participants.forEach((participant) => {
     const row = document.createElement("div");
     row.className = "participant";
-    if (participant.id === state.activeParticipantId) {
-      row.classList.add("active");
-    }
+    row.classList.toggle("active", participant.id === meeting.activeParticipantId);
 
     const name = document.createElement("button");
     name.type = "button";
     name.textContent = participant.name;
     name.addEventListener("click", () => {
-      state.activeParticipantId = participant.id;
+      meeting.activeParticipantId = participant.id;
       saveAndRender();
     });
 
@@ -152,43 +187,37 @@ function renderParticipants() {
     participantsEl.append(row);
   });
 
-  const active = getActiveParticipant();
+  const active = getActiveParticipant(meeting);
   activePersonLabel.textContent = active
-    ? `${active.name}: ${labels[activeMode]} markatzen`
+    ? `${active.name}: klik bakoitza Bai -> Behar izanez gero -> Hutsik`
     : "Gehitu parte-hartzaile bat orduak markatzeko";
 }
 
-function renderGrid() {
+function renderGrid(meeting) {
+  const dates = meeting.dates;
+  const times = buildTimes(meeting.startTime, meeting.endTime);
+  grid.style.setProperty("--day-count", dates.length);
   grid.innerHTML = "";
   grid.append(createCell("", "grid-cell header corner"));
 
-  days.forEach((day) => {
-    grid.append(createCell(day.label, "grid-cell header"));
+  dates.forEach((date) => {
+    grid.append(createCell(formatDate(date), "grid-cell header"));
   });
 
   times.forEach((time) => {
     grid.append(createCell(time, "grid-cell time"));
-    days.forEach((day) => {
-      const key = slotKey(day.key, time);
-      const slot = createCell("", `grid-cell slot ${slotClass(key)}`);
+    dates.forEach((date) => {
+      const key = slotKey(date, time);
+      const slot = createCell("", `grid-cell slot ${slotClass(meeting, key)}`);
       slot.dataset.key = key;
-      slot.dataset.score = slotScoreLabel(key);
+      slot.dataset.score = slotScoreLabel(meeting, key);
       slot.tabIndex = 0;
-      slot.setAttribute("aria-label", `${day.label} ${time}: ${slotSummary(key)}`);
-      slot.addEventListener("pointerdown", (event) => {
-        event.preventDefault();
-        isDragging = true;
-        markSlot(key);
-      });
-      slot.addEventListener("pointerenter", () => {
-        if (isDragging) {
-          markSlot(key);
-        }
-      });
+      slot.setAttribute("aria-label", `${formatDate(date)} ${time}: ${slotSummary(meeting, key)}`);
+      slot.addEventListener("click", () => cycleSlot(meeting, key));
       slot.addEventListener("keydown", (event) => {
         if (event.key === "Enter" || event.key === " ") {
           event.preventDefault();
-          markSlot(key);
+          cycleSlot(meeting, key);
         }
       });
       grid.append(slot);
@@ -196,10 +225,14 @@ function renderGrid() {
   });
 }
 
-function renderBestSlots() {
-  const bestSlots = rankSlots().slice(0, 5);
+function renderBestSlots(meeting) {
   bestSlotsEl.innerHTML = "";
 
+  if (!meeting) {
+    return;
+  }
+
+  const bestSlots = rankSlots(meeting).slice(0, 5);
   if (bestSlots.length === 0) {
     const item = document.createElement("li");
     item.textContent = "Oraindik ez dago erantzunik.";
@@ -214,74 +247,156 @@ function renderBestSlots() {
   });
 }
 
-function createCell(text, className) {
-  const cell = document.createElement("div");
-  cell.className = className;
-  cell.textContent = text;
-  return cell;
+function showSetup() {
+  store.activeMeetingId = null;
+  draftDates = [];
+  meetingTitle.value = "";
+  meetingDate.value = toDateInputValue(new Date());
+  saveAndRender();
+}
+
+function addDraftDate() {
+  const date = meetingDate.value;
+  if (!date || draftDates.includes(date)) {
+    return;
+  }
+
+  draftDates = [...draftDates, date].sort();
+  renderDraftDates();
+}
+
+function createMeeting() {
+  const title = meetingTitle.value.trim();
+  if (!title) {
+    meetingTitle.focus();
+    return;
+  }
+
+  if (draftDates.length === 0) {
+    meetingDate.focus();
+    return;
+  }
+
+  if (timeToMinutes(startTime.value) >= timeToMinutes(endTime.value)) {
+    endTime.focus();
+    return;
+  }
+
+  const meeting = {
+    id: createId(),
+    title,
+    duration: Number(durationInput.value),
+    dates: [...draftDates],
+    startTime: startTime.value,
+    endTime: endTime.value,
+    activeParticipantId: null,
+    participants: [],
+  };
+
+  store.meetings.push(meeting);
+  store.activeMeetingId = meeting.id;
+  draftDates = [];
+  saveAndRender();
 }
 
 function addParticipant() {
+  const meeting = getActiveMeeting();
   const name = participantName.value.trim();
-  if (!name) {
+  if (!meeting || !name) {
     participantName.focus();
     return;
   }
 
-  const id = globalThis.crypto?.randomUUID ? `p-${crypto.randomUUID()}` : `p${Date.now()}`;
-  state.participants.push({ id, name, availability: {} });
-  state.activeParticipantId = id;
+  const participant = { id: createId(), name, availability: {} };
+  meeting.participants.push(participant);
+  meeting.activeParticipantId = participant.id;
   participantName.value = "";
   saveAndRender();
 }
 
 function removeParticipant(id) {
-  state.participants = state.participants.filter((participant) => participant.id !== id);
-  if (state.activeParticipantId === id) {
-    state.activeParticipantId = state.participants[0]?.id || null;
-  }
-  saveAndRender();
-}
-
-function markSlot(key) {
-  const active = getActiveParticipant();
-  if (!active) {
+  const meeting = getActiveMeeting();
+  if (!meeting) {
     return;
   }
-  active.availability[key] = activeMode;
+
+  meeting.participants = meeting.participants.filter((participant) => participant.id !== id);
+  if (meeting.activeParticipantId === id) {
+    meeting.activeParticipantId = meeting.participants[0]?.id || null;
+  }
   saveAndRender();
 }
 
-function slotClass(key) {
-  const summary = summarizeSlot(key);
+function clearActiveMeetingResponses() {
+  const meeting = getActiveMeeting();
+  if (!meeting) {
+    return;
+  }
+
+  meeting.participants = meeting.participants.map((participant) => ({
+    ...participant,
+    availability: {},
+  }));
+  saveAndRender();
+}
+
+function cycleSlot(meeting, key) {
+  const active = getActiveParticipant(meeting);
+  if (!active) {
+    participantName.focus();
+    return;
+  }
+
+  const current = active.availability[key];
+  if (!current || current === "unavailable") {
+    active.availability[key] = "available";
+  } else if (current === "available") {
+    active.availability[key] = "maybe";
+  } else {
+    delete active.availability[key];
+  }
+  saveAndRender();
+}
+
+function slotClass(meeting, key) {
+  const active = getActiveParticipant(meeting);
+  const ownValue = active?.availability[key];
+  if (ownValue === "available") {
+    return "available";
+  }
+  if (ownValue === "maybe") {
+    return "maybe";
+  }
+
+  const summary = summarizeSlot(meeting, key);
   if (summary.available > 0 && summary.maybe > 0) {
     return "mixed";
   }
   if (summary.available > 0) {
-    return "available";
+    return "available-faint";
   }
   if (summary.maybe > 0) {
-    return "maybe";
+    return "maybe-faint";
   }
   return "unavailable";
 }
 
-function slotScoreLabel(key) {
-  const summary = summarizeSlot(key);
+function slotScoreLabel(meeting, key) {
+  const summary = summarizeSlot(meeting, key);
   const positiveResponses = summary.available + summary.maybe;
-  if (positiveResponses === 0 || state.participants.length === 0) {
+  if (positiveResponses === 0 || meeting.participants.length === 0) {
     return "";
   }
-  return `${positiveResponses}/${state.participants.length}`;
+  return `${positiveResponses}/${meeting.participants.length}`;
 }
 
-function slotSummary(key) {
-  const summary = summarizeSlot(key);
+function slotSummary(meeting, key) {
+  const summary = summarizeSlot(meeting, key);
   return `${summary.available} bai, ${summary.maybe} behar izanez gero`;
 }
 
-function summarizeSlot(key) {
-  return state.participants.reduce(
+function summarizeSlot(meeting, key) {
+  return meeting.participants.reduce(
     (summary, participant) => {
       const value = participant.availability[key] || "unavailable";
       if (value === "available") {
@@ -297,30 +412,35 @@ function summarizeSlot(key) {
   );
 }
 
-function rankSlots() {
-  return days
-    .flatMap((day) => times.map((time) => ({ key: slotKey(day.key, time), day: day.key, time })))
-    .map((slot) => ({ ...slot, ...summarizeSlot(slot.key) }))
+function rankSlots(meeting) {
+  return meeting.dates
+    .flatMap((date) => buildTimes(meeting.startTime, meeting.endTime).map((time) => ({ key: slotKey(date, time) })))
+    .map((slot) => ({ ...slot, ...summarizeSlot(meeting, slot.key) }))
     .filter((slot) => slot.score > 0)
     .sort((a, b) => b.score - a.score || b.available - a.available || a.key.localeCompare(b.key));
 }
 
 function exportCalendar() {
-  const selected = rankSlots().slice(0, 3);
+  const meeting = getActiveMeeting();
+  if (!meeting) {
+    return;
+  }
+
+  const selected = rankSlots(meeting).slice(0, 3);
   if (selected.length === 0) {
     return;
   }
 
   const events = selected.map((slot, index) => {
     const start = parseLocalSlot(slot.key);
-    const end = new Date(start.getTime() + state.duration * 60 * 1000);
+    const end = new Date(start.getTime() + meeting.duration * 60 * 1000);
     return [
       "BEGIN:VEVENT",
       `UID:${createId()}@hitzordu.local`,
       `DTSTAMP:${toIcsDate(new Date())}`,
       `DTSTART:${toIcsDate(start)}`,
       `DTEND:${toIcsDate(end)}`,
-      `SUMMARY:${escapeIcsText(state.title)}${index > 0 ? ` aukera ${index + 1}` : ""}`,
+      `SUMMARY:${escapeIcsText(meeting.title)}${index > 0 ? ` aukera ${index + 1}` : ""}`,
       `DESCRIPTION:${escapeIcsText(`${slot.available} bai, ${slot.maybe} behar izanez gero`)}`,
       "END:VEVENT",
     ].join("\r\n");
@@ -339,9 +459,36 @@ function exportCalendar() {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = `${slugify(state.title)}.ics`;
+  link.download = `${slugify(meeting.title)}.ics`;
   link.click();
   URL.revokeObjectURL(url);
+}
+
+function fillTimeSelects() {
+  const options = [];
+  for (let minutes = 0; minutes <= 24 * 60; minutes += 30) {
+    const time = minutesToTime(minutes);
+    options.push(`<option value="${time}">${time}</option>`);
+  }
+  startTime.innerHTML = options.join("");
+  endTime.innerHTML = options.join("");
+  startTime.value = "09:00";
+  endTime.value = "17:00";
+}
+
+function buildTimes(start, end) {
+  const times = [];
+  for (let minutes = timeToMinutes(start); minutes < timeToMinutes(end); minutes += 30) {
+    times.push(minutesToTime(minutes));
+  }
+  return times;
+}
+
+function createCell(text, className) {
+  const cell = document.createElement("div");
+  cell.className = className;
+  cell.textContent = text;
+  return cell;
 }
 
 function parseLocalSlot(key) {
@@ -364,24 +511,60 @@ function escapeIcsText(text) {
 
 function formatSlot(key) {
   const [date, time] = key.split("T");
-  const day = days.find((item) => item.key === date)?.label || date;
-  return `${day}, ${time}`;
+  return `${formatDate(date)}, ${time}`;
+}
+
+function formatDate(date) {
+  return new Intl.DateTimeFormat("eu", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  }).format(parseDate(date));
+}
+
+function parseDate(date) {
+  const [year, month, day] = date.split("-").map(Number);
+  return new Date(year, month - 1, day);
+}
+
+function toDateInputValue(date) {
+  return [
+    date.getFullYear(),
+    String(date.getMonth() + 1).padStart(2, "0"),
+    String(date.getDate()).padStart(2, "0"),
+  ].join("-");
 }
 
 function slotKey(day, time) {
   return `${day}T${time}`;
 }
 
+function timeToMinutes(time) {
+  const [hours, minutes] = time.split(":").map(Number);
+  return hours * 60 + minutes;
+}
+
+function minutesToTime(minutes) {
+  const normalized = minutes % (24 * 60);
+  const hours = Math.floor(normalized / 60);
+  const mins = normalized % 60;
+  return `${String(hours).padStart(2, "0")}:${String(mins).padStart(2, "0")}`;
+}
+
 function createId() {
   return globalThis.crypto?.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`;
 }
 
-function getActiveParticipant() {
-  return state.participants.find((participant) => participant.id === state.activeParticipantId);
+function getActiveMeeting() {
+  return store.meetings.find((meeting) => meeting.id === store.activeMeetingId);
+}
+
+function getActiveParticipant(meeting) {
+  return meeting?.participants.find((participant) => participant.id === meeting.activeParticipantId);
 }
 
 function saveState() {
-  localStorage.setItem(storageKey, JSON.stringify(state));
+  localStorage.setItem(storageKey, JSON.stringify(store));
   if (!backendAvailable) {
     return;
   }
@@ -389,10 +572,10 @@ function saveState() {
   clearTimeout(saveTimer);
   saveTimer = setTimeout(async () => {
     try {
-      const response = await fetch("/api/event", {
+      const response = await fetch("/api/state", {
         method: "PUT",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify(state),
+        body: JSON.stringify(store),
       });
       backendAvailable = response.ok;
     } catch {
@@ -406,19 +589,16 @@ function saveAndRender() {
   saveState();
 }
 
-async function resetData() {
-  localStorage.removeItem(storageKey);
-  state = createDefaultState();
-  activeMode = "available";
-  document.querySelectorAll(".mode").forEach((mode) => {
-    mode.classList.toggle("active", mode.dataset.mode === activeMode);
-  });
-  saveAndRender();
-}
-
 function slugify(text) {
   return text
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "") || "hitzordu";
+}
+
+function escapeHtml(text) {
+  return text.replace(/[&<>"']/g, (char) => {
+    const entities = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
+    return entities[char];
+  });
 }

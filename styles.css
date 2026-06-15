@@ -54,6 +54,10 @@ select {
   background: #fff;
 }
 
+[hidden] {
+  display: none !important;
+}
+
 label {
   display: grid;
   gap: 6px;
@@ -98,11 +102,10 @@ h2 {
   font-size: 1rem;
 }
 
-.event-meta {
-  display: grid;
-  grid-template-columns: minmax(220px, 320px) 150px;
-  gap: 12px;
-  width: min(100%, 500px);
+.top-actions {
+  display: flex;
+  justify-content: flex-end;
+  width: min(100%, 240px);
 }
 
 .app-shell {
@@ -130,6 +133,31 @@ h2 {
   gap: 8px;
 }
 
+.meetings,
+.selected-dates {
+  display: grid;
+  gap: 8px;
+}
+
+.meeting-item {
+  display: grid;
+  gap: 4px;
+  min-height: 54px;
+  padding: 10px;
+  text-align: left;
+}
+
+.meeting-item.active {
+  border-color: var(--accent);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.meeting-item span,
+.muted {
+  color: var(--muted);
+  font-size: 0.84rem;
+}
+
 .participant {
   display: flex;
   align-items: center;
@@ -153,29 +181,6 @@ h2 {
   color: var(--danger);
 }
 
-.mode-control {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 8px;
-}
-
-.mode.active[data-mode="available"] {
-  color: #fff;
-  border-color: var(--available);
-  background: var(--available);
-}
-
-.mode.active[data-mode="maybe"] {
-  color: #211600;
-  border-color: var(--maybe);
-  background: #f3c861;
-}
-
-.mode.active[data-mode="unavailable"] {
-  border-color: #9da8b2;
-  background: var(--unavailable);
-}
-
 .best-slots {
   display: grid;
   gap: 8px;
@@ -188,9 +193,43 @@ h2 {
   color: var(--muted);
 }
 
+.setup-panel,
 .schedule-panel {
   min-width: 0;
   padding: 20px clamp(12px, 3vw, 36px) 36px;
+}
+
+.setup-inner {
+  display: grid;
+  gap: 18px;
+  max-width: 760px;
+}
+
+.setup-grid {
+  display: grid;
+  grid-template-columns: 1.5fr repeat(3, minmax(120px, 1fr));
+  gap: 12px;
+}
+
+.date-row {
+  display: grid;
+  grid-template-columns: minmax(180px, 260px) 150px;
+  align-items: end;
+  gap: 12px;
+}
+
+.date-chip {
+  justify-self: start;
+  min-height: 34px;
+  padding: 0 10px;
+}
+
+.primary-action {
+  justify-self: start;
+  min-width: 160px;
+  color: #fff;
+  border-color: var(--accent);
+  background: var(--accent);
 }
 
 .grid-toolbar {
@@ -206,9 +245,44 @@ h2 {
   color: var(--muted);
 }
 
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-bottom: 12px;
+  color: var(--muted);
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.legend-dot {
+  width: 12px;
+  height: 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+}
+
+.available-dot {
+  background: color-mix(in srgb, var(--available) 72%, white);
+}
+
+.maybe-dot {
+  background: color-mix(in srgb, var(--maybe) 62%, white);
+}
+
+.empty-dot {
+  background: var(--unavailable);
+}
+
 .availability-grid {
   display: grid;
-  grid-template-columns: 76px repeat(5, minmax(112px, 1fr));
+  grid-template-columns: 76px repeat(var(--day-count, 1), minmax(112px, 1fr));
   overflow: auto;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -271,8 +345,16 @@ h2 {
   background: color-mix(in srgb, var(--available) 72%, white);
 }
 
+.slot.available-faint {
+  background: color-mix(in srgb, var(--available) 30%, white);
+}
+
 .slot.maybe {
   background: color-mix(in srgb, var(--maybe) 62%, white);
+}
+
+.slot.maybe-faint {
+  background: color-mix(in srgb, var(--maybe) 28%, white);
 }
 
 .slot.mixed {
@@ -296,6 +378,8 @@ h2 {
   }
 
   .event-meta,
+  .setup-grid,
+  .date-row,
   .app-shell {
     grid-template-columns: 1fr;
   }
@@ -306,11 +390,10 @@ h2 {
   }
 
   .availability-grid {
-    grid-template-columns: 68px repeat(5, minmax(96px, 1fr));
+    grid-template-columns: 68px repeat(var(--day-count, 1), minmax(96px, 1fr));
   }
 
   .grid-cell {
     min-width: 96px;
   }
 }
-
