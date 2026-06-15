@@ -21,6 +21,7 @@ let draftMode = "dated";
 let draftDates = [];
 let draftWeekdays = weekdays.slice(0, 5).map((day) => day.key);
 let calendarMonth = startOfMonth(new Date());
+let selectedSlotKey = null;
 let backendAvailable = false;
 let saveTimer = null;
 
@@ -34,6 +35,7 @@ const setupPanel = document.querySelector("#setup-panel");
 const schedulePanel = document.querySelector("#schedule-panel");
 const participantPanel = document.querySelector("#participant-panel");
 const bestPanel = document.querySelector("#best-panel");
+const slotDetailsPanel = document.querySelector("#slot-details-panel");
 const scheduleTitle = document.querySelector("#schedule-title");
 const meetingTitle = document.querySelector("#meeting-title");
 const selectedDatesEl = document.querySelector("#selected-dates");
@@ -47,6 +49,8 @@ const calendarTitle = document.querySelector("#calendar-title");
 const calendarGrid = document.querySelector("#calendar-grid");
 const weekdayChoices = document.querySelector("#weekday-choices");
 const exportButton = document.querySelector("#export-ics");
+const slotDetailsTitle = document.querySelector("#slot-details-title");
+const slotDetails = document.querySelector("#slot-details");
 
 document.querySelector("#new-meeting").addEventListener("click", showSetup);
 document.querySelector("#create-meeting").addEventListener("click", createMeeting);
@@ -106,6 +110,7 @@ function render() {
   renderSetupMode();
   renderParticipants(meeting);
   renderBestSlots(meeting);
+  renderSlotDetails(meeting);
   renderPanels(meeting);
 
   if (meeting) {
@@ -122,6 +127,7 @@ function renderPanels(meeting) {
   schedulePanel.hidden = !meeting;
   participantPanel.hidden = !meeting;
   bestPanel.hidden = !meeting;
+  slotDetailsPanel.hidden = !meeting;
 }
 
 function renderMeetings() {
@@ -143,6 +149,7 @@ function renderMeetings() {
     button.innerHTML = `<strong>${escapeHtml(meeting.title)}</strong><span>${meetingSummary(meeting)}</span>`;
     button.addEventListener("click", () => {
       store.activeMeetingId = meeting.id;
+      selectedSlotKey = null;
       saveAndRender();
     });
     meetingsEl.append(button);
@@ -287,6 +294,7 @@ function renderGrid(meeting) {
     columns.forEach((column) => {
       const key = slotKey(column.key, time);
       const slot = createCell("", `grid-cell slot ${slotClass(meeting, key)}`);
+      slot.classList.toggle("selected", key === selectedSlotKey);
       slot.dataset.key = key;
       slot.dataset.score = slotScoreLabel(meeting, key);
       slot.tabIndex = 0;
@@ -320,13 +328,51 @@ function renderBestSlots(meeting) {
 
   bestSlots.forEach((slot) => {
     const item = document.createElement("li");
-    item.textContent = `${formatSlot(meeting, slot.key)} - ${slot.available} bai, ${slot.maybe} behar izanez gero`;
+    const button = document.createElement("button");
+    button.type = "button";
+    button.textContent = `${formatSlot(meeting, slot.key)} - ${slot.available} bai, ${slot.maybe} behar izanez gero`;
+    button.addEventListener("click", () => {
+      selectedSlotKey = slot.key;
+      render();
+    });
+    item.append(button);
     bestSlotsEl.append(item);
+  });
+}
+
+function renderSlotDetails(meeting) {
+  slotDetails.innerHTML = "";
+
+  if (!meeting || !selectedSlotKey) {
+    slotDetailsTitle.textContent = "Hautatu gelaxka bat.";
+    return;
+  }
+
+  slotDetailsTitle.textContent = formatSlot(meeting, selectedSlotKey);
+  const groups = slotResponseGroups(meeting, selectedSlotKey);
+
+  [
+    ["Bai", groups.available],
+    ["Behar izanez gero", groups.maybe],
+    ["Ez / hutsik", groups.unavailable],
+  ].forEach(([title, names]) => {
+    const group = document.createElement("div");
+    group.className = "slot-detail-group";
+
+    const heading = document.createElement("h3");
+    heading.textContent = `${title} (${names.length})`;
+
+    const list = document.createElement("p");
+    list.textContent = names.length > 0 ? names.join(", ") : "-";
+
+    group.append(heading, list);
+    slotDetails.append(group);
   });
 }
 
 function showSetup() {
   store.activeMeetingId = null;
+  selectedSlotKey = null;
   draftDates = [];
   draftWeekdays = weekdays.slice(0, 5).map((day) => day.key);
   draftMode = "dated";
@@ -380,6 +426,7 @@ function createMeeting() {
 
   store.meetings.push(meeting);
   store.activeMeetingId = meeting.id;
+  selectedSlotKey = null;
   draftDates = [];
   saveAndRender();
 }
@@ -422,10 +469,12 @@ function clearActiveMeetingResponses() {
     ...participant,
     availability: {},
   }));
+  selectedSlotKey = null;
   saveAndRender();
 }
 
 function cycleSlot(meeting, key) {
+  selectedSlotKey = key;
   const active = getActiveParticipant(meeting);
   if (!active) {
     participantName.focus();
@@ -441,6 +490,23 @@ function cycleSlot(meeting, key) {
     delete active.availability[key];
   }
   saveAndRender();
+}
+
+function slotResponseGroups(meeting, key) {
+  return meeting.participants.reduce(
+    (groups, participant) => {
+      const value = participant.availability[key];
+      if (value === "available") {
+        groups.available.push(participant.name);
+      } else if (value === "maybe") {
+        groups.maybe.push(participant.name);
+      } else {
+        groups.unavailable.push(participant.name);
+      }
+      return groups;
+    },
+    { available: [], maybe: [], unavailable: [] },
+  );
 }
 
 function slotClass(meeting, key) {
