@@ -24,6 +24,7 @@ let calendarMonth = startOfMonth(new Date());
 let selectedSlotKey = null;
 let dragPaintState = null;
 let backendAvailable = false;
+let createTokenRequired = false;
 let saveTimer = null;
 
 const participantsEl = document.querySelector("#participants");
@@ -40,6 +41,7 @@ const bestPanel = document.querySelector("#best-panel");
 const slotDetailsPanel = document.querySelector("#slot-details-panel");
 const scheduleTitle = document.querySelector("#schedule-title");
 const meetingTitle = document.querySelector("#meeting-title");
+const createToken = document.querySelector("#create-token");
 const selectedDatesEl = document.querySelector("#selected-dates");
 const startTime = document.querySelector("#start-time");
 const endTime = document.querySelector("#end-time");
@@ -55,6 +57,7 @@ const slotDetailsTitle = document.querySelector("#slot-details-title");
 const slotDetails = document.querySelector("#slot-details");
 const shareLink = document.querySelector("#share-link");
 const copyShareLink = document.querySelector("#copy-share-link");
+const setupError = document.querySelector("#setup-error");
 
 document.querySelector("#new-meeting").addEventListener("click", showSetup);
 document.querySelector("#create-meeting").addEventListener("click", createMeeting);
@@ -97,11 +100,31 @@ async function init() {
 }
 
 async function loadStore() {
+  await loadBackendConfig();
+
+  const meetingId = new URLSearchParams(window.location.search).get("meeting");
+  if (meetingId) {
+    try {
+      const response = await fetch(`/api/meetings/${encodeURIComponent(meetingId)}`);
+      if (response.ok) {
+        backendAvailable = true;
+        const meeting = await response.json();
+        return { activeMeetingId: meeting.id, meetings: [meeting] };
+      }
+    } catch {
+      backendAvailable = false;
+    }
+  }
+
   try {
     const response = await fetch("/api/state");
     if (response.ok) {
       backendAvailable = true;
       return await response.json();
+    }
+    if (response.status === 410) {
+      backendAvailable = true;
+      return createDefaultStore();
     }
   } catch {
     backendAvailable = false;
@@ -109,6 +132,22 @@ async function loadStore() {
 
   const saved = localStorage.getItem(storageKey);
   return saved ? JSON.parse(saved) : createDefaultStore();
+}
+
+async function loadBackendConfig() {
+  try {
+    const response = await fetch("/api/config");
+    if (response.ok) {
+      backendAvailable = true;
+      const config = await response.json();
+      createTokenRequired = Boolean(config.createTokenRequired);
+      return;
+    }
+  } catch {
+    backendAvailable = false;
+  }
+
+  createTokenRequired = false;
 }
 
 function createDefaultStore() {
@@ -459,6 +498,8 @@ function showSetup() {
   draftMode = "dated";
   calendarMonth = startOfMonth(new Date());
   meetingTitle.value = "";
+  createToken.value = "";
+  setSetupError("");
   saveAndRender();
 }
 
@@ -475,19 +516,29 @@ function changeCalendarMonth(delta) {
   renderCalendar();
 }
 
-function createMeeting() {
+async function createMeeting() {
   const title = meetingTitle.value.trim();
+  setSetupError("");
   if (!title) {
     meetingTitle.focus();
     return;
   }
 
+  const token = createToken.value;
+  if (!token && createTokenRequired) {
+    setSetupError("Sartu sortzeko tokena.");
+    createToken.focus();
+    return;
+  }
+
   const selected = draftMode === "dated" ? draftDates : draftWeekdays;
   if (selected.length === 0) {
+    setSetupError("Aukeratu gutxienez egun bat.");
     return;
   }
 
   if (timeToMinutes(startTime.value) >= timeToMinutes(endTime.value)) {
+    setSetupError("Amaiera hasiera baino beranduago jarri.");
     endTime.focus();
     return;
   }
@@ -505,12 +556,49 @@ function createMeeting() {
     participants: [],
   };
 
-  store.meetings.push(meeting);
-  store.activeMeetingId = meeting.id;
+  const created = await createMeetingOnServer(meeting, token);
+  if (!created) {
+    setSetupError("Tokena ez da zuzena edo ezin izan da bilera sortu.");
+    createToken.focus();
+    return;
+  }
+
+  store.meetings = [created];
+  store.activeMeetingId = created.id;
   selectedSlotKey = null;
-  setMeetingUrl(meeting.id);
+  setMeetingUrl(created.id);
   draftDates = [];
+  createToken.value = "";
   saveAndRender();
+}
+
+function setSetupError(message) {
+  setupError.textContent = message;
+  setupError.hidden = !message;
+}
+
+async function createMeetingOnServer(meeting, token) {
+  if (!backendAvailable) {
+    return meeting;
+  }
+
+  try {
+    const response = await fetch("/api/meetings", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-create-token": token,
+      },
+      body: JSON.stringify({ meeting }),
+    });
+    if (!response.ok) {
+      return null;
+    }
+    return await response.json();
+  } catch {
+    backendAvailable = false;
+    return meeting;
+  }
 }
 
 function addParticipant() {
@@ -1031,13 +1119,18 @@ function saveState() {
     return;
   }
 
+  const meeting = getActiveMeeting();
+  if (!meeting) {
+    return;
+  }
+
   clearTimeout(saveTimer);
   saveTimer = setTimeout(async () => {
     try {
-      const response = await fetch("/api/state", {
+      const response = await fetch(`/api/meetings/${encodeURIComponent(meeting.id)}`, {
         method: "PUT",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify(store),
+        body: JSON.stringify({ meeting }),
       });
       backendAvailable = response.ok;
     } catch {

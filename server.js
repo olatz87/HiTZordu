@@ -1,5 +1,5 @@
 import { createServer } from "node:http";
-import { randomUUID } from "node:crypto";
+import { randomUUID, timingSafeEqual } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { createReadStream } from "node:fs";
 import { extname, join } from "node:path";
@@ -10,6 +10,7 @@ const dataDir = join(rootDir, "data");
 const storeFile = join(dataDir, "store.json");
 const port = Number(process.env.PORT || 3000);
 const host = process.env.HOST || "127.0.0.1";
+const createToken = process.env.HITZORDU_CREATE_TOKEN || "";
 const staticFiles = new Map([
   ["/", "index.html"],
   ["/index.html", "index.html"],
@@ -25,17 +26,39 @@ const contentTypes = {
 
 await ensureStoreFile();
 
+if (!createToken) {
+  console.warn("HITZORDU_CREATE_TOKEN is not set; meeting creation is open in this development run.");
+}
+
 const server = createServer(async (request, response) => {
   try {
-    if (request.url?.startsWith("/api/state")) {
-      await handleStateApi(request, response);
+    const url = new URL(request.url || "/", `http://${request.headers.host}`);
+    if (url.pathname === "/api/meetings") {
+      await handleMeetingsApi(request, response);
+      return;
+    }
+
+    if (url.pathname === "/api/config") {
+      await handleConfigApi(request, response);
+      return;
+    }
+
+    if (url.pathname.startsWith("/api/meetings/")) {
+      await handleMeetingApi(request, response, decodeURIComponent(url.pathname.slice("/api/meetings/".length)));
+      return;
+    }
+
+    if (url.pathname === "/api/state") {
+      sendJson(response, 410, { error: "deprecated_endpoint" });
       return;
     }
 
     await serveStatic(request, response);
   } catch (error) {
-    console.error(error);
-    sendJson(response, 500, { error: "internal_server_error" });
+    if (!error.status || error.status >= 500) {
+      console.error(error);
+    }
+    sendJson(response, error.status || 500, { error: error.code || "internal_server_error" });
   }
 });
 
@@ -43,21 +66,80 @@ server.listen(port, host, () => {
   console.log(`HiTZordu listening on http://${host}:${port}`);
 });
 
-async function handleStateApi(request, response) {
+async function handleConfigApi(request, response) {
+  if (request.method !== "GET") {
+    response.writeHead(405, securityHeaders({ Allow: "GET" }));
+    response.end();
+    return;
+  }
+
+  sendJson(response, 200, { createTokenRequired: Boolean(createToken) });
+}
+
+async function handleMeetingsApi(request, response) {
+  if (request.method !== "POST") {
+    response.writeHead(405, securityHeaders({ Allow: "POST" }));
+    response.end();
+    return;
+  }
+
+  if (!isValidCreateToken(request.headers["x-create-token"])) {
+    sendJson(response, 403, { error: "invalid_create_token" });
+    return;
+  }
+
+  const body = await readJsonBody(request);
+  const meeting = normalizeMeeting(body.meeting || body);
+  if (!meeting) {
+    sendJson(response, 400, { error: "invalid_meeting" });
+    return;
+  }
+
+  const store = await readStore();
+  if (store.meetings.some((item) => item.id === meeting.id)) {
+    meeting.id = randomUUID();
+  }
+  const createdMeeting = { ...meeting, participants: [], activeParticipantId: null };
+  store.meetings.push(createdMeeting);
+  store.activeMeetingId = createdMeeting.id;
+  await writeStore(store);
+  sendJson(response, 201, createdMeeting);
+}
+
+async function handleMeetingApi(request, response, meetingId) {
+  if (!meetingId) {
+    sendJson(response, 404, { error: "not_found" });
+    return;
+  }
+
   if (request.method === "GET") {
-    sendJson(response, 200, await readStore());
+    const meeting = findMeeting(await readStore(), meetingId);
+    if (!meeting) {
+      sendJson(response, 404, { error: "not_found" });
+      return;
+    }
+    sendJson(response, 200, meeting);
     return;
   }
 
   if (request.method === "PUT") {
+    const store = await readStore();
+    const index = store.meetings.findIndex((meeting) => meeting.id === meetingId);
+    if (index === -1) {
+      sendJson(response, 404, { error: "not_found" });
+      return;
+    }
+
     const body = await readJsonBody(request);
-    const store = normalizeStore(body);
+    const updated = normalizeMeetingResponses(store.meetings[index], body.meeting || body);
+    store.meetings[index] = updated;
+    store.activeMeetingId = updated.id;
     await writeStore(store);
-    sendJson(response, 200, store);
+    sendJson(response, 200, updated);
     return;
   }
 
-  response.writeHead(405, { Allow: "GET, PUT" });
+  response.writeHead(405, securityHeaders({ Allow: "GET, PUT" }));
   response.end();
 }
 
@@ -66,7 +148,7 @@ async function serveStatic(request, response) {
   const fileName = staticFiles.get(url.pathname);
 
   if (!fileName) {
-    response.writeHead(404, { "content-type": "text/plain; charset=utf-8" });
+    response.writeHead(404, securityHeaders({ "content-type": "text/plain; charset=utf-8" }));
     response.end("Not found");
     return;
   }
@@ -74,13 +156,13 @@ async function serveStatic(request, response) {
   const filePath = join(rootDir, fileName);
   const stream = createReadStream(filePath);
   stream.on("error", () => {
-    response.writeHead(404, { "content-type": "text/plain; charset=utf-8" });
+    response.writeHead(404, securityHeaders({ "content-type": "text/plain; charset=utf-8" }));
     response.end("Not found");
   });
 
-  response.writeHead(200, {
+  response.writeHead(200, securityHeaders({
     "content-type": contentTypes[extname(filePath)] || "application/octet-stream",
-  });
+  }));
   stream.pipe(response);
 }
 
@@ -110,15 +192,36 @@ async function readJsonBody(request) {
     chunks.push(chunk);
     size += chunk.byteLength;
     if (size > 1_000_000) {
-      throw new Error("Request body too large");
+      throwHttpError(413, "request_body_too_large");
     }
   }
-  return JSON.parse(Buffer.concat(chunks).toString("utf8") || "{}");
+
+  try {
+    return JSON.parse(Buffer.concat(chunks).toString("utf8") || "{}");
+  } catch {
+    throwHttpError(400, "invalid_json");
+  }
 }
 
 function sendJson(response, status, payload) {
-  response.writeHead(status, { "content-type": "application/json; charset=utf-8" });
+  response.writeHead(status, securityHeaders({ "content-type": "application/json; charset=utf-8" }));
   response.end(JSON.stringify(payload));
+}
+
+function securityHeaders(headers = {}) {
+  return {
+    "x-content-type-options": "nosniff",
+    "referrer-policy": "same-origin",
+    "content-security-policy": "default-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'",
+    ...headers,
+  };
+}
+
+function throwHttpError(status, code) {
+  const error = new Error(code);
+  error.status = status;
+  error.code = code;
+  throw error;
 }
 
 function normalizeStore(input) {
@@ -173,6 +276,39 @@ function normalizeMeeting(meeting) {
     activeParticipantId,
     participants,
   };
+}
+
+function normalizeMeetingResponses(existingMeeting, input) {
+  const participants = input && typeof input === "object" && Array.isArray(input.participants)
+    ? input.participants.map(normalizeParticipant).filter(Boolean)
+    : existingMeeting.participants;
+  const activeParticipantId = participants.some((participant) => participant.id === input?.activeParticipantId)
+    ? input.activeParticipantId
+    : participants[0]?.id || null;
+
+  return {
+    ...existingMeeting,
+    activeParticipantId,
+    participants,
+  };
+}
+
+function findMeeting(store, meetingId) {
+  return store.meetings.find((meeting) => meeting.id === meetingId) || null;
+}
+
+function isValidCreateToken(value) {
+  if (!createToken) {
+    return true;
+  }
+
+  if (typeof value !== "string" || !value) {
+    return false;
+  }
+
+  const expected = Buffer.from(createToken);
+  const actual = Buffer.from(value);
+  return actual.length === expected.length && timingSafeEqual(actual, expected);
 }
 
 function normalizeParticipant(participant) {

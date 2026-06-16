@@ -20,6 +20,24 @@ npm start
 
 Kontuz: bigarren komandoa `npm start` da, ez `nvm start`.
 
+Bilera berriak sortzea token batekin babesteko, jarri sekretua ingurune-aldagai
+moduan zerbitzaria abiatu aurretik:
+
+```bash
+export HITZORDU_CREATE_TOKEN="zure-token-luzea-hemen"
+npm start
+```
+
+Ez jarri token hori `app.js`, `server.js` edo GitHub-era igoko den beste
+fitxategi batean. Garapenerako `.env` fitxategi bat erabili nahi baduzu,
+lokalean bakarrik sortu; `.gitignore`-n baztertuta dago. Kasu horretan:
+
+```bash
+cp .env.example .env
+# editatu .env eta bete HITZORDU_CREATE_TOKEN
+npm run start:env
+```
+
 Aplikazioa hemen irekiko da:
 
 ```text
@@ -40,6 +58,8 @@ aplikazioak datuak zerbitzarian gordeko ditu.
 - Bilera bat baino gehiago kudeatzea.
 - Bilera bakoitzerako partekatzeko esteka sortzea (`?meeting=...`), taldeko kideek
   euren erantzunak bete ditzaten.
+- Bilera berriak sortzeko token pribatua eskatzea; esteka dutenek, ordea,
+  tokenik gabe eman dezakete izena eta erabilgarritasuna.
 - Bilera sortu aurretik izena, mota, hasiera, amaiera eta iraupena finkatzea.
 - Bi bilera mota:
   - data zehatzak, hilabeteko egutegian klik eginez hautatzeko.
@@ -70,5 +90,6 @@ publikoa modelatzea izango litzateke.
 
 ## APIa
 
-- `GET /api/state`: bilera guztiak eta erantzunak irakurri.
-- `PUT /api/state`: aplikazioaren egoera osoa gorde.
+- `POST /api/meetings`: bilera berria sortu, `HITZORDU_CREATE_TOKEN` tokenarekin.
+- `GET /api/meetings/:id`: bilera zehatz bat eta haren erantzunak irakurri.
+- `PUT /api/meetings/:id`: bilera horretako parte-hartzaileak eta erantzunak gorde.
