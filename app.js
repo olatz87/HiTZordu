@@ -30,6 +30,9 @@ let saveTimer = null;
 const participantsEl = document.querySelector("#participants");
 const participantName = document.querySelector("#participant-name");
 const activePersonLabel = document.querySelector("#active-person-label");
+const calendarUrl = document.querySelector("#calendar-url");
+const importCalendar = document.querySelector("#import-calendar");
+const calendarImportStatus = document.querySelector("#calendar-import-status");
 const bestSlotsEl = document.querySelector("#best-slots");
 const personalGrid = document.querySelector("#personal-grid");
 const summaryGrid = document.querySelector("#summary-grid");
@@ -64,6 +67,7 @@ const setupError = document.querySelector("#setup-error");
 document.querySelector("#new-meeting").addEventListener("click", showSetup);
 document.querySelector("#create-meeting").addEventListener("click", createMeeting);
 document.querySelector("#add-participant").addEventListener("click", addParticipant);
+importCalendar.addEventListener("click", importCalendarAvailability);
 document.querySelector("#clear-meeting").addEventListener("click", clearActiveMeetingResponses);
 document.querySelector("#prev-month").addEventListener("click", () => changeCalendarMonth(-1));
 document.querySelector("#next-month").addEventListener("click", () => changeCalendarMonth(1));
@@ -281,7 +285,14 @@ function renderParticipants(meeting) {
 
   if (!meeting) {
     activePersonLabel.textContent = "";
+    calendarImportStatus.textContent = "";
     return;
+  }
+
+  importCalendar.disabled = meeting.kind !== "dated";
+  calendarUrl.disabled = meeting.kind !== "dated";
+  if (meeting.kind === "weekly") {
+    calendarImportStatus.textContent = "Google Calendar inportazioa data zehatzetako bileretan bakarrik dago erabilgarri.";
   }
 
   meeting.participants.forEach((participant) => {
@@ -655,6 +666,70 @@ function addParticipant() {
   meeting.activeParticipantId = participant.id;
   participantName.value = "";
   saveAndRender();
+}
+
+async function importCalendarAvailability() {
+  const meeting = getActiveMeeting();
+  const active = getActiveParticipant(meeting);
+  const url = calendarUrl.value.trim();
+
+  if (!meeting || !active) {
+    participantName.focus();
+    calendarImportStatus.textContent = "Gehitu edo hautatu parte-hartzaile bat lehenengo.";
+    return;
+  }
+
+  if (meeting.kind !== "dated") {
+    calendarImportStatus.textContent = "Inportazioa data zehatzetako bileretan bakarrik dago erabilgarri.";
+    return;
+  }
+
+  if (!url) {
+    calendarUrl.focus();
+    calendarImportStatus.textContent = "Itsatsi Google Calendar esteka publikoa.";
+    return;
+  }
+
+  importCalendar.disabled = true;
+  calendarImportStatus.textContent = "Egutegia irakurtzen...";
+
+  try {
+    const response = await fetch("/api/calendar/availability", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ calendarUrl: url, meeting }),
+    });
+    const result = await response.json();
+    if (!response.ok) {
+      calendarImportStatus.textContent = calendarImportError(result.error);
+      return;
+    }
+
+    Object.entries(result.availability).forEach(([key, value]) => {
+      if (value === "available") {
+        active.availability[key] = "available";
+      } else {
+        delete active.availability[key];
+      }
+    });
+    calendarImportStatus.textContent = `${result.calendars} egutegi irakurrita; libre dauden tarteak markatu dira.`;
+    saveAndRender();
+  } catch {
+    calendarImportStatus.textContent = "Ezin izan da egutegia irakurri.";
+  } finally {
+    importCalendar.disabled = false;
+  }
+}
+
+function calendarImportError(error) {
+  const messages = {
+    calendar_feed_not_accessible: "Egutegia ez da publikoa edo ezin da irakurri.",
+    calendar_feed_too_large: "Egutegia handiegia da.",
+    dated_meeting_required: "Inportazioa data zehatzetako bileretan bakarrik dago erabilgarri.",
+    invalid_calendar_feed: "Estekak ez du egutegi baliozkorik eman.",
+    unsupported_calendar_url: "Erabili Google Calendar embed edo public .ics esteka bat.",
+  };
+  return messages[error] || "Ezin izan da egutegia irakurri.";
 }
 
 function removeParticipant(id) {

@@ -1,6 +1,7 @@
 import { createServer } from "node:http";
 import { randomUUID, timingSafeEqual } from "node:crypto";
 import { spawn } from "node:child_process";
+import ICAL from "ical.js";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { createReadStream } from "node:fs";
 import { extname, join } from "node:path";
@@ -44,6 +45,11 @@ const server = createServer(async (request, response) => {
 
     if (url.pathname === "/api/config") {
       await handleConfigApi(request, response);
+      return;
+    }
+
+    if (url.pathname === "/api/calendar/availability") {
+      await handleCalendarAvailabilityApi(request, response);
       return;
     }
 
@@ -108,6 +114,40 @@ async function handleMeetingsApi(request, response) {
   store.activeMeetingId = createdMeeting.id;
   await writeStore(store);
   sendJson(response, 201, publicMeeting(createdMeeting));
+}
+
+async function handleCalendarAvailabilityApi(request, response) {
+  if (request.method !== "POST") {
+    response.writeHead(405, securityHeaders({ Allow: "POST" }));
+    response.end();
+    return;
+  }
+
+  const body = await readJsonBody(request);
+  const meeting = normalizeMeeting(body.meeting);
+  if (!meeting || meeting.kind !== "dated") {
+    sendJson(response, 400, { error: "dated_meeting_required" });
+    return;
+  }
+
+  const feeds = calendarFeedUrls(body.calendarUrl);
+  if (feeds.length === 0) {
+    sendJson(response, 400, { error: "unsupported_calendar_url" });
+    return;
+  }
+
+  const busyRanges = [];
+  const windowRange = meetingDateWindow(meeting);
+  for (const feedUrl of feeds) {
+    const ics = await fetchCalendarFeed(feedUrl);
+    busyRanges.push(...busyRangesFromIcs(ics, windowRange));
+  }
+
+  sendJson(response, 200, {
+    availability: calendarAvailability(meeting, busyRanges),
+    calendars: feeds.length,
+    busyRanges: busyRanges.length,
+  });
 }
 
 async function handleMeetingApi(request, response, meetingId) {
@@ -455,6 +495,192 @@ function encodeMimeHeader(value) {
 
 function sanitizeHeaderValue(value) {
   return String(value).replace(/[\r\n]+/g, " ").trim();
+}
+
+function calendarFeedUrls(value) {
+  if (typeof value !== "string" || value.length > 4_000) {
+    return [];
+  }
+
+  let url;
+  try {
+    url = new URL(value.trim());
+  } catch {
+    return [];
+  }
+
+  if (url.protocol !== "https:" || url.hostname !== "calendar.google.com") {
+    return [];
+  }
+
+  if (url.pathname === "/calendar/embed") {
+    return url.searchParams.getAll("src")
+      .map(decodeCalendarSource)
+      .filter(Boolean)
+      .map((calendarId) => `https://calendar.google.com/calendar/ical/${encodeURIComponent(calendarId)}/public/basic.ics`);
+  }
+
+  if (url.pathname.startsWith("/calendar/ical/") && url.pathname.endsWith("/public/basic.ics")) {
+    return [url.toString()];
+  }
+
+  return [];
+}
+
+function decodeCalendarSource(value) {
+  if (!value || value.length > 512) {
+    return "";
+  }
+
+  const decoded = decodeURIComponent(value);
+  if (decoded.includes("@")) {
+    return decoded;
+  }
+
+  try {
+    return Buffer.from(decoded, "base64").toString("utf8");
+  } catch {
+    return "";
+  }
+}
+
+async function fetchCalendarFeed(url) {
+  const response = await fetch(url, {
+    redirect: "follow",
+    headers: { "user-agent": "HiTZordu/0.1" },
+  });
+  if (!response.ok) {
+    throwHttpError(400, "calendar_feed_not_accessible");
+  }
+
+  const text = await readResponseText(response, 2_000_000);
+  if (new URL(response.url).hostname !== "calendar.google.com") {
+    throwHttpError(400, "calendar_feed_not_accessible");
+  }
+  if (!text.includes("BEGIN:VCALENDAR")) {
+    throwHttpError(400, "invalid_calendar_feed");
+  }
+  return text;
+}
+
+async function readResponseText(response, limit) {
+  const reader = response.body?.getReader();
+  if (!reader) {
+    return response.text();
+  }
+
+  const chunks = [];
+  let size = 0;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) {
+      break;
+    }
+    size += value.byteLength;
+    if (size > limit) {
+      throwHttpError(413, "calendar_feed_too_large");
+    }
+    chunks.push(value);
+  }
+
+  return Buffer.concat(chunks).toString("utf8");
+}
+
+function busyRangesFromIcs(ics, windowRange) {
+  const calendar = new ICAL.Component(ICAL.parse(ics));
+  const events = calendar.getAllSubcomponents("vevent").map((component) => new ICAL.Event(component));
+  const expansionStart = new Date(windowRange.start.getTime() - 7 * 24 * 60 * 60 * 1_000);
+  const windowStart = ICAL.Time.fromJSDate(expansionStart, false);
+  const ranges = [];
+
+  for (const event of events) {
+    const transparency = event.component.getFirstPropertyValue("transp") || "";
+    if (String(transparency).toUpperCase() === "TRANSPARENT") {
+      continue;
+    }
+
+    if (!event.isRecurring()) {
+      addBusyRange(ranges, event.startDate.toJSDate(), event.endDate.toJSDate(), windowRange);
+      continue;
+    }
+
+    const iterator = event.iterator(windowStart);
+    for (let index = 0; index < 1_000; index += 1) {
+      const next = iterator.next();
+      if (!next) {
+        break;
+      }
+      const occurrence = event.getOccurrenceDetails(next);
+      const start = occurrence.startDate.toJSDate();
+      const end = occurrence.endDate.toJSDate();
+      if (start > windowRange.end) {
+        break;
+      }
+      addBusyRange(ranges, start, end, windowRange);
+    }
+  }
+
+  return ranges;
+}
+
+function addBusyRange(ranges, start, end, windowRange) {
+  if (end <= windowRange.start || start >= windowRange.end) {
+    return;
+  }
+
+  ranges.push({
+    start: new Date(Math.max(start.getTime(), windowRange.start.getTime())),
+    end: new Date(Math.min(end.getTime(), windowRange.end.getTime())),
+  });
+}
+
+function meetingDateWindow(meeting) {
+  const sortedDates = [...meeting.dates].sort();
+  return {
+    start: parseLocalDateTime(sortedDates[0], "00:00"),
+    end: new Date(parseLocalDateTime(sortedDates.at(-1), "23:59").getTime() + 60_000),
+  };
+}
+
+function calendarAvailability(meeting, busyRanges) {
+  return Object.fromEntries(
+    meeting.dates.flatMap((date) => buildTimes(meeting.startTime, meeting.endTime).map((time) => {
+      const key = `${date}T${time}`;
+      const start = parseLocalDateTime(date, time);
+      const end = new Date(start.getTime() + 30 * 60 * 1_000);
+      return [key, overlapsBusyRange(start, end, busyRanges) ? "" : "available"];
+    })),
+  );
+}
+
+function overlapsBusyRange(start, end, busyRanges) {
+  return busyRanges.some((range) => start < range.end && end > range.start);
+}
+
+function parseLocalDateTime(date, time) {
+  const [year, month, day] = date.split("-").map(Number);
+  const [hour, minute] = time.split(":").map(Number);
+  return new Date(year, month - 1, day, hour, minute);
+}
+
+function buildTimes(start, end) {
+  const times = [];
+  for (let minutes = timeToMinutes(start); minutes < timeToMinutes(end); minutes += 30) {
+    times.push(minutesToTime(minutes));
+  }
+  return times;
+}
+
+function timeToMinutes(time) {
+  const [hours, minutes] = time.split(":").map(Number);
+  return hours * 60 + minutes;
+}
+
+function minutesToTime(minutes) {
+  const normalized = minutes % (24 * 60);
+  const hours = Math.floor(normalized / 60);
+  const mins = normalized % 60;
+  return `${String(hours).padStart(2, "0")}:${String(mins).padStart(2, "0")}`;
 }
 
 function createDefaultStore() {

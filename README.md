@@ -75,6 +75,8 @@ aplikazioak datuak zerbitzarian gordeko ditu.
   tokenik gabe eman dezakete izena eta erabilgarritasuna.
 - Hautazko abisua: espero den erantzun kopurura iristean antolatzaileari emaila
   bidaltzea.
+- Google Calendar esteka publiko batetik libre dauden tarteak aurremarkatzea,
+  parte-hartzaileak gero eskuz zuzendu ahal izateko.
 - Bilera sortu aurretik izena, mota, hasiera, amaiera eta iraupena finkatzea.
 - Bi bilera mota:
   - data zehatzak, hilabeteko egutegian klik eginez hautatzeko.
@@ -108,3 +110,17 @@ publikoa modelatzea izango litzateke.
 - `POST /api/meetings`: bilera berria sortu, `HITZORDU_CREATE_TOKEN` tokenarekin.
 - `GET /api/meetings/:id`: bilera zehatz bat eta haren erantzunak irakurri.
 - `PUT /api/meetings/:id`: bilera horretako parte-hartzaileak eta erantzunak gorde.
+- `POST /api/calendar/availability`: Google Calendar embed edo public `.ics`
+  esteka batetik bilera zehatz baterako libre dauden slotak kalkulatu.
+
+## Google Calendar inportazioa
+
+Parte-hartzaile bakoitzak Google Calendar-eko embed edo public `.ics` esteka
+bat itsatsi dezake. Zerbitzariak egutegia unean bertan irakurri, okupatutako
+tarteak kalkulatu, eta libre dauden slotak `Bai` gisa aurremarkatzen ditu.
+Okupatutako slotak hutsik uzten dira, eta erabiltzaileak gero eskuz aldatu
+ditzake.
+
+Funtzio honek data zehatzetako bileretan bakarrik funtzionatzen du. Egutegiak
+publikoa izan behar du; HiTZordu-k ez du Google OAuth tokenik edo egutegiaren
+edukirik gordetzen, kalkulatutako erabilgarritasuna bakarrik aplikatzen da.

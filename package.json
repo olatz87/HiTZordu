@@ -11,5 +11,8 @@
   "engines": {
     "node": ">=24"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "ical.js": "^2.2.1"
+  }
 }
