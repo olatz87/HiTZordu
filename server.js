@@ -1,5 +1,6 @@
 import { createServer } from "node:http";
 import { randomUUID, timingSafeEqual } from "node:crypto";
+import { spawn } from "node:child_process";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { createReadStream } from "node:fs";
 import { extname, join } from "node:path";
@@ -11,6 +12,9 @@ const storeFile = join(dataDir, "store.json");
 const port = Number(process.env.PORT || 3000);
 const host = process.env.HOST || "127.0.0.1";
 const createToken = process.env.HITZORDU_CREATE_TOKEN || "";
+const sendmailPath = process.env.HITZORDU_SENDMAIL || "/usr/sbin/sendmail";
+const notifyFrom = process.env.HITZORDU_NOTIFY_FROM || "HiTZordu <hitzordu@localhost>";
+const publicBaseUrl = process.env.HITZORDU_PUBLIC_BASE_URL || "";
 const staticFiles = new Map([
   ["/", "index.html"],
   ["/index.html", "index.html"],
@@ -103,7 +107,7 @@ async function handleMeetingsApi(request, response) {
   store.meetings.push(createdMeeting);
   store.activeMeetingId = createdMeeting.id;
   await writeStore(store);
-  sendJson(response, 201, createdMeeting);
+  sendJson(response, 201, publicMeeting(createdMeeting));
 }
 
 async function handleMeetingApi(request, response, meetingId) {
@@ -118,7 +122,7 @@ async function handleMeetingApi(request, response, meetingId) {
       sendJson(response, 404, { error: "not_found" });
       return;
     }
-    sendJson(response, 200, meeting);
+    sendJson(response, 200, publicMeeting(meeting));
     return;
   }
 
@@ -135,7 +139,11 @@ async function handleMeetingApi(request, response, meetingId) {
     store.meetings[index] = updated;
     store.activeMeetingId = updated.id;
     await writeStore(store);
-    sendJson(response, 200, updated);
+    if (await notifyOrganizerIfReady(updated)) {
+      store.meetings[index] = updated;
+      await writeStore(store);
+    }
+    sendJson(response, 200, publicMeeting(updated));
     return;
   }
 
@@ -273,6 +281,9 @@ function normalizeMeeting(meeting) {
     weekdays: kind === "weekly" ? weekdays : [],
     startTime: isTimeString(meeting.startTime) ? meeting.startTime : "09:00",
     endTime: isTimeString(meeting.endTime) ? meeting.endTime : "17:00",
+    expectedResponses: normalizeExpectedResponses(meeting.expectedResponses),
+    organizerEmail: normalizeEmail(meeting.organizerEmail),
+    notificationSentAt: typeof meeting.notificationSentAt === "string" ? meeting.notificationSentAt : null,
     activeParticipantId,
     participants,
   };
@@ -311,6 +322,11 @@ function isValidCreateToken(value) {
   return actual.length === expected.length && timingSafeEqual(actual, expected);
 }
 
+function publicMeeting(meeting) {
+  const { organizerEmail, notificationSentAt, ...publicFields } = meeting;
+  return publicFields;
+}
+
 function normalizeParticipant(participant) {
   if (!participant || typeof participant !== "object") {
     return null;
@@ -345,6 +361,100 @@ function cleanText(value, fallback) {
 
   const trimmed = value.trim();
   return trimmed ? trimmed.slice(0, 120) : fallback;
+}
+
+function normalizeExpectedResponses(value) {
+  const count = Number(value);
+  return Number.isInteger(count) && count > 0 && count <= 500 ? count : null;
+}
+
+function normalizeEmail(value) {
+  if (typeof value !== "string") {
+    return "";
+  }
+
+  const email = value.trim().slice(0, 254);
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? email : "";
+}
+
+async function notifyOrganizerIfReady(meeting) {
+  if (!meeting.expectedResponses || !meeting.organizerEmail || meeting.notificationSentAt) {
+    return false;
+  }
+
+  const completedCount = countCompletedParticipants(meeting);
+  if (completedCount < meeting.expectedResponses) {
+    return false;
+  }
+
+  const sent = await sendOrganizerNotification(meeting, completedCount);
+  if (!sent) {
+    return false;
+  }
+
+  meeting.notificationSentAt = new Date().toISOString();
+  return true;
+}
+
+function countCompletedParticipants(meeting) {
+  return meeting.participants.filter((participant) => Object.keys(participant.availability).length > 0).length;
+}
+
+function sendOrganizerNotification(meeting, completedCount) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(sendmailPath, ["-t"], { stdio: ["pipe", "ignore", "pipe"] });
+    const errors = [];
+
+    child.stderr.on("data", (chunk) => {
+      errors.push(chunk);
+    });
+    child.stdin.on("error", (error) => {
+      errors.push(Buffer.from(error.message));
+    });
+    child.on("error", reject);
+    child.on("close", (code) => {
+      if (code === 0) {
+        resolve(true);
+        return;
+      }
+      reject(new Error(`sendmail exited with code ${code}: ${Buffer.concat(errors).toString("utf8")}`));
+    });
+
+    child.stdin.end(buildNotificationEmail(meeting, completedCount));
+  }).catch((error) => {
+    console.error(`Could not send notification for meeting ${meeting.id}:`, error.message);
+    return false;
+  });
+}
+
+function buildNotificationEmail(meeting, completedCount) {
+  const meetingUrl = publicBaseUrl ? `${publicBaseUrl.replace(/\/$/, "")}/?meeting=${encodeURIComponent(meeting.id)}` : "";
+  const lines = [
+    `From: ${sanitizeHeaderValue(notifyFrom)}`,
+    `To: ${meeting.organizerEmail}`,
+    `Subject: ${encodeMimeHeader(`HiTZordu: ${meeting.title}`)}`,
+    "Content-Type: text/plain; charset=utf-8",
+    "",
+    `Kaixo,`,
+    "",
+    `"${meeting.title}" bilerak ${completedCount}/${meeting.expectedResponses} erantzun jaso ditu.`,
+    "HiTZordu ireki eta tarte onenak begiratu ditzakezu.",
+  ];
+
+  if (meetingUrl) {
+    lines.push("", meetingUrl);
+  }
+
+  lines.push("", "HiTZordu");
+  return `${lines.join("\n")}\n`;
+}
+
+function encodeMimeHeader(value) {
+  return `=?UTF-8?B?${Buffer.from(value, "utf8").toString("base64")}?=`;
+}
+
+function sanitizeHeaderValue(value) {
+  return String(value).replace(/[\r\n]+/g, " ").trim();
 }
 
 function createDefaultStore() {

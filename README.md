@@ -38,6 +38,19 @@ cp .env.example .env
 npm run start:env
 ```
 
+Antolatzaileari email bidez abisatzeko aukera erabili nahi bada, zerbitzarian
+`sendmail` bateragarri bat konfiguratu behar da, adibidez Postfix edo `msmtp`.
+Ondoren ingurune-aldagai hauek erabili daitezke:
+
+```bash
+export HITZORDU_SENDMAIL="/usr/sbin/sendmail"
+export HITZORDU_NOTIFY_FROM="HiTZordu <hitzordu@example.org>"
+export HITZORDU_PUBLIC_BASE_URL="https://zure-zerbitzaria.example.org"
+```
+
+Abisua hautazkoa da: bilera sortzean espero diren erantzunen kopurua eta
+antolatzailearen emaila hutsik uzten badira, ez da mezurik bidaliko.
+
 Aplikazioa hemen irekiko da:
 
 ```text
@@ -60,6 +73,8 @@ aplikazioak datuak zerbitzarian gordeko ditu.
   euren erantzunak bete ditzaten.
 - Bilera berriak sortzeko token pribatua eskatzea; esteka dutenek, ordea,
   tokenik gabe eman dezakete izena eta erabilgarritasuna.
+- Hautazko abisua: espero den erantzun kopurura iristean antolatzaileari emaila
+  bidaltzea.
 - Bilera sortu aurretik izena, mota, hasiera, amaiera eta iraupena finkatzea.
 - Bi bilera mota:
   - data zehatzak, hilabeteko egutegian klik eginez hautatzeko.

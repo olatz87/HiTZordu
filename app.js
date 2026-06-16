@@ -42,6 +42,8 @@ const slotDetailsPanel = document.querySelector("#slot-details-panel");
 const scheduleTitle = document.querySelector("#schedule-title");
 const meetingTitle = document.querySelector("#meeting-title");
 const createToken = document.querySelector("#create-token");
+const expectedResponses = document.querySelector("#expected-responses");
+const organizerEmail = document.querySelector("#organizer-email");
 const selectedDatesEl = document.querySelector("#selected-dates");
 const startTime = document.querySelector("#start-time");
 const endTime = document.querySelector("#end-time");
@@ -499,6 +501,8 @@ function showSetup() {
   calendarMonth = startOfMonth(new Date());
   meetingTitle.value = "";
   createToken.value = "";
+  expectedResponses.value = "";
+  organizerEmail.value = "";
   setSetupError("");
   saveAndRender();
 }
@@ -531,6 +535,11 @@ async function createMeeting() {
     return;
   }
 
+  const notificationSettings = readNotificationSettings();
+  if (!notificationSettings) {
+    return;
+  }
+
   const selected = draftMode === "dated" ? draftDates : draftWeekdays;
   if (selected.length === 0) {
     setSetupError("Aukeratu gutxienez egun bat.");
@@ -552,6 +561,7 @@ async function createMeeting() {
     weekdays: draftMode === "weekly" ? [...draftWeekdays] : [],
     startTime: startTime.value,
     endTime: endTime.value,
+    ...notificationSettings,
     activeParticipantId: null,
     participants: [],
   };
@@ -569,7 +579,38 @@ async function createMeeting() {
   setMeetingUrl(created.id);
   draftDates = [];
   createToken.value = "";
+  expectedResponses.value = "";
+  organizerEmail.value = "";
   saveAndRender();
+}
+
+function readNotificationSettings() {
+  const expected = expectedResponses.value ? Number(expectedResponses.value) : null;
+  const email = organizerEmail.value.trim();
+
+  if (!expected && !email) {
+    return { expectedResponses: null, organizerEmail: "" };
+  }
+
+  if (!Number.isInteger(expected) || expected < 1 || expected > 500) {
+    setSetupError("Espero diren erantzunak 1 eta 500 arteko zenbaki osoa izan behar du.");
+    expectedResponses.focus();
+    return null;
+  }
+
+  if (!email) {
+    setSetupError("Sartu antolatzailearen emaila abisua bidaltzeko.");
+    organizerEmail.focus();
+    return null;
+  }
+
+  if (!organizerEmail.validity.valid) {
+    setSetupError("Email helbidea ez da baliozkoa.");
+    organizerEmail.focus();
+    return null;
+  }
+
+  return { expectedResponses: expected, organizerEmail: email };
 }
 
 function setSetupError(message) {
