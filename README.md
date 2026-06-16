@@ -53,7 +53,10 @@ aplikazioak datuak zerbitzarian gordeko ditu.
 - Klik egin eta gora edo behera arrastatuz egoera bera tarte jarraietan margotzea.
 - Egunak jarraian ez daudenean egutegiko zutabeak bereizle bikoitzarekin markatzea.
 - Taldearen laburpena ikustea.
-- Tarte onenak identifikatzea.
+- Tarte onenak identifikatzea, bileraren iraupen osoa kontuan hartuta:
+  - emaitza optimoak: denek `Bai` esandako blokeak.
+  - aukera onenak: denek `Bai` edo `Behar izanez gero` esandako blokeak.
+  - hurbilenak: aurrekoak ez daudenean, erantzun positibo gehien dituztenak.
 - Tarte onenak `.ics` fitxategi gisa esportatzea.
   - Oraingoz esportazioa data zehatzetako bileretan bakarrik dago gaituta.
 - Datuak backend arinean gordetzea `data/store.json` fitxategian.

@@ -364,26 +364,60 @@ function renderBestSlots(meeting) {
     return;
   }
 
-  const bestSlots = rankSlots(meeting).slice(0, 5);
-  if (bestSlots.length === 0) {
-    const item = document.createElement("li");
-    item.textContent = "Oraindik ez dago erantzunik.";
+  const rankedSlots = rankSlots(meeting);
+  if (rankedSlots.length === 0) {
+    const item = document.createElement("p");
+    item.className = "muted";
+    item.textContent = meeting.participants.length === 0
+      ? "Oraindik ez dago erantzunik."
+      : "Ez dago tarte positiborik iraupen osoarekin.";
     bestSlotsEl.append(item);
     return;
   }
 
-  bestSlots.forEach((slot) => {
+  const optimalSlots = rankedSlots.filter((slot) => slot.kind === "optimal").slice(0, 5);
+  const flexibleSlots = rankedSlots.filter((slot) => slot.kind === "flexible").slice(0, 5);
+  const fallbackSlots = rankedSlots.filter((slot) => slot.kind === "fallback").slice(0, 5);
+
+  if (optimalSlots.length > 0) {
+    appendBestSlotGroup("Emaitza optimoak", optimalSlots, meeting);
+    if (flexibleSlots.length > 0) {
+      appendBestSlotGroup("Denek bai edo behar izanez gero", flexibleSlots, meeting);
+    }
+    return;
+  }
+
+  if (flexibleSlots.length > 0) {
+    appendBestSlotGroup("Aukera onenak, if-need-be kontuan", flexibleSlots, meeting);
+    return;
+  }
+
+  appendBestSlotGroup("Ez dago aukera bateraturik; hurbilenak", fallbackSlots, meeting);
+}
+
+function appendBestSlotGroup(title, slots, meeting) {
+  const group = document.createElement("section");
+  group.className = "best-slot-group";
+
+  const heading = document.createElement("h3");
+  heading.textContent = title;
+  const list = document.createElement("ol");
+
+  slots.forEach((slot) => {
     const item = document.createElement("li");
     const button = document.createElement("button");
     button.type = "button";
-    button.textContent = `${formatSlot(meeting, slot.key)} - ${slot.available} bai, ${slot.maybe} behar izanez gero`;
+    button.textContent = `${formatSlotBlock(meeting, slot)} - ${slot.available} bai, ${slot.maybe} behar izanez gero`;
     button.addEventListener("click", () => {
       selectedSlotKey = slot.key;
       render();
     });
     item.append(button);
-    bestSlotsEl.append(item);
+    list.append(item);
   });
+
+  group.append(heading, list);
+  bestSlotsEl.append(group);
 }
 
 function renderSlotDetails(meeting) {
@@ -684,10 +718,64 @@ function summarizeSlot(meeting, key) {
 
 function rankSlots(meeting) {
   return meetingColumns(meeting)
-    .flatMap((column) => buildTimes(meeting.startTime, meeting.endTime).map((time) => ({ key: slotKey(column.key, time) })))
-    .map((slot) => ({ ...slot, ...summarizeSlot(meeting, slot.key) }))
+    .flatMap((column) => buildStartTimes(meeting).map((time) => ({ key: slotKey(column.key, time) })))
+    .map((slot) => ({ ...slot, ...summarizeSlotBlock(meeting, slot.key) }))
     .filter((slot) => slot.score > 0)
-    .sort((a, b) => b.score - a.score || b.available - a.available || a.key.localeCompare(b.key));
+    .map((slot) => ({ ...slot, kind: bestSlotKind(meeting, slot) }))
+    .sort(compareRankedSlots);
+}
+
+function summarizeSlotBlock(meeting, key) {
+  const keys = slotBlockKeys(meeting, key);
+  return meeting.participants.reduce(
+    (summary, participant) => {
+      const values = keys.map((slot) => participant.availability[slot] || "unavailable");
+      const hasUnavailable = values.some((value) => value === "unavailable");
+      const hasMaybe = values.some((value) => value === "maybe");
+
+      if (!hasUnavailable && !hasMaybe) {
+        summary.available += 1;
+        summary.score += stateRank.available;
+      } else if (!hasUnavailable) {
+        summary.maybe += 1;
+        summary.score += stateRank.maybe;
+      }
+
+      return summary;
+    },
+    { available: 0, maybe: 0, score: 0 },
+  );
+}
+
+function bestSlotKind(meeting, slot) {
+  if (slot.available === meeting.participants.length) {
+    return "optimal";
+  }
+  if (slot.available + slot.maybe === meeting.participants.length) {
+    return "flexible";
+  }
+  return "fallback";
+}
+
+function compareRankedSlots(a, b) {
+  const kindOrder = { optimal: 0, flexible: 1, fallback: 2 };
+  const aPositive = a.available + a.maybe;
+  const bPositive = b.available + b.maybe;
+  return kindOrder[a.kind] - kindOrder[b.kind]
+    || bPositive - aPositive
+    || b.available - a.available
+    || b.score - a.score
+    || a.key.localeCompare(b.key);
+}
+
+function slotBlockKeys(meeting, key) {
+  const [column, start] = key.split("T");
+  return buildBlockTimes(start, meeting.duration).map((time) => slotKey(column, time));
+}
+
+function formatSlotBlock(meeting, slot) {
+  const endTimeLabel = minutesToTime(timeToMinutes(slot.key.split("T")[1]) + meeting.duration);
+  return `${formatSlot(meeting, slot.key)}-${endTimeLabel}`;
 }
 
 function exportCalendar() {
@@ -750,6 +838,24 @@ function buildTimes(start, end) {
   const times = [];
   for (let minutes = timeToMinutes(start); minutes < timeToMinutes(end); minutes += 30) {
     times.push(minutesToTime(minutes));
+  }
+  return times;
+}
+
+function buildStartTimes(meeting) {
+  const times = [];
+  const start = timeToMinutes(meeting.startTime);
+  const latestStart = timeToMinutes(meeting.endTime) - meeting.duration;
+  for (let minutes = start; minutes <= latestStart; minutes += 30) {
+    times.push(minutesToTime(minutes));
+  }
+  return times;
+}
+
+function buildBlockTimes(start, duration) {
+  const times = [];
+  for (let offset = 0; offset < duration; offset += 30) {
+    times.push(minutesToTime(timeToMinutes(start) + offset));
   }
   return times;
 }

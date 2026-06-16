@@ -168,17 +168,34 @@ h2 {
 
 .best-slots {
   display: grid;
+  gap: 12px;
+  margin: 0;
+}
+
+.best-slot-group {
+  display: grid;
+  gap: 6px;
+}
+
+.best-slot-group h3 {
+  margin: 0;
+  color: var(--ink);
+  font-size: 0.86rem;
+}
+
+.best-slot-group ol {
+  display: grid;
   gap: 8px;
   margin: 0;
   padding-left: 22px;
 }
 
-.best-slots li {
+.best-slot-group li {
   padding: 8px 0;
   color: var(--muted);
 }
 
-.best-slots button {
+.best-slot-group button {
   min-height: 0;
   padding: 0;
   border: 0;
