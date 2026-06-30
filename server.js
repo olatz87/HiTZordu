@@ -16,6 +16,7 @@ const createToken = process.env.HITZORDU_CREATE_TOKEN || "";
 const sendmailPath = process.env.HITZORDU_SENDMAIL || "/usr/sbin/sendmail";
 const notifyFrom = process.env.HITZORDU_NOTIFY_FROM || "HiTZordu <hitzordu@localhost>";
 const publicBaseUrl = process.env.HITZORDU_PUBLIC_BASE_URL || "";
+const meetingRetentionDays = normalizeRetentionDays(process.env.HITZORDU_MEETING_RETENTION_DAYS, 180);
 const staticFiles = new Map([
   ["/", "index.html"],
   ["/index.html", "index.html"],
@@ -111,7 +112,8 @@ async function handleMeetingsApi(request, response) {
   if (store.meetings.some((item) => item.id === meeting.id)) {
     meeting.id = randomUUID();
   }
-  const createdMeeting = { ...meeting, participants: [], activeParticipantId: null };
+  const now = new Date().toISOString();
+  const createdMeeting = { ...meeting, createdAt: now, updatedAt: now, participants: [], activeParticipantId: null };
   store.meetings.push(createdMeeting);
   store.activeMeetingId = createdMeeting.id;
   await writeStore(store);
@@ -278,13 +280,14 @@ function normalizeStore(input) {
   const meetings = Array.isArray(input.meetings)
     ? input.meetings.map(normalizeMeeting).filter(Boolean)
     : [];
-  const activeMeetingId = meetings.some((meeting) => meeting.id === input.activeMeetingId)
+  const retainedMeetings = meetings.filter((meeting) => !isExpiredMeeting(meeting));
+  const activeMeetingId = retainedMeetings.some((meeting) => meeting.id === input.activeMeetingId)
     ? input.activeMeetingId
-    : meetings[0]?.id || null;
+    : retainedMeetings[0]?.id || null;
 
   return {
     activeMeetingId,
-    meetings,
+    meetings: retainedMeetings,
     updatedAt: new Date().toISOString(),
   };
 }
@@ -318,6 +321,8 @@ function normalizeMeeting(meeting) {
     id: typeof meeting.id === "string" ? meeting.id : randomUUID(),
     kind,
     title,
+    createdAt: isIsoDateTime(meeting.createdAt) ? meeting.createdAt : new Date().toISOString(),
+    updatedAt: isIsoDateTime(meeting.updatedAt) ? meeting.updatedAt : new Date().toISOString(),
     duration: [30, 60, 90].includes(Number(meeting.duration)) ? Number(meeting.duration) : 60,
     dates: kind === "dated" ? dates : [],
     weekdays: kind === "weekly" ? weekdays : [],
@@ -341,9 +346,35 @@ function normalizeMeetingResponses(existingMeeting, input) {
 
   return {
     ...existingMeeting,
+    updatedAt: new Date().toISOString(),
     activeParticipantId,
     participants,
   };
+}
+
+function normalizeRetentionDays(value, fallback) {
+  if (value === undefined || value === "") {
+    return fallback;
+  }
+
+  const days = Number(value);
+  return Number.isInteger(days) && days >= 0 ? days : fallback;
+}
+
+function isExpiredMeeting(meeting) {
+  if (meetingRetentionDays === 0) {
+    return false;
+  }
+
+  return meetingExpiryBase(meeting).getTime() < Date.now() - meetingRetentionDays * 24 * 60 * 60 * 1_000;
+}
+
+function meetingExpiryBase(meeting) {
+  if (meeting.kind === "dated" && meeting.dates.length > 0) {
+    return parseLocalDateTime(meeting.dates.at(-1), "23:59");
+  }
+
+  return parseIsoDateTime(meeting.updatedAt) || parseIsoDateTime(meeting.createdAt) || new Date();
 }
 
 function findMeeting(store, meetingId) {
@@ -703,6 +734,19 @@ function isDateString(value) {
 
 function isTimeString(value) {
   return typeof value === "string" && /^([01]\d|2[0-4]):[0-5]\d$/.test(value);
+}
+
+function isIsoDateTime(value) {
+  return parseIsoDateTime(value) !== null;
+}
+
+function parseIsoDateTime(value) {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
 }
 
 function isWeekdayKey(value) {

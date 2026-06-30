@@ -83,6 +83,7 @@ Gutxienez hau bete:
 HITZORDU_CREATE_TOKEN=token-luze-ausazkoa
 PORT=3000
 HOST=127.0.0.1
+HITZORDU_MEETING_RETENTION_DAYS=180
 HITZORDU_PUBLIC_BASE_URL=https://zure-domeinua
 ```
 
@@ -109,6 +110,20 @@ bakarrik irekitzea.
 - aplikazioa exekutatzen duen erabiltzaileak `data/` karpetan idazteko baimena duela.
 - `data/store.json` backupetan sartzen dela.
 - `.env` ez dela GitHub-era igotzen.
+
+Bilera zaharrak automatikoki garbitzen dira. Defektuz, data zehatzetako bilerak
+azken hautatutako egunetik 180 egunera kentzen dira; bilera orokorrak azken
+eguneratzetik 180 egunera. Balioa aldatu nahi bada, erabili:
+
+```bash
+HITZORDU_MEETING_RETENTION_DAYS=90
+```
+
+Garbiketa desgaitzeko:
+
+```bash
+HITZORDU_MEETING_RETENTION_DAYS=0
+```
 
 `data/*.json`, `.env` eta `node_modules/` `.gitignore`-n baztertuta daude.
 
@@ -145,6 +160,8 @@ aplikazioak datuak zerbitzarian gordeko ditu.
 - Klik egin eta gora edo behera arrastatuz egoera bera tarte jarraietan margotzea.
 - Egunak jarraian ez daudenean egutegiko zutabeak bereizle bikoitzarekin markatzea.
 - Taldearen laburpena ikustea.
+- Bilera zaharrak automatikoki garbitzea, `HITZORDU_MEETING_RETENTION_DAYS`
+  ingurune-aldagaiaren arabera.
 - Tarte onenak identifikatzea, bileraren iraupen osoa kontuan hartuta:
   - emaitza optimoak: denek `Bai` esandako blokeak.
   - aukera onenak: denek `Bai` edo `Behar izanez gero` esandako blokeak.
