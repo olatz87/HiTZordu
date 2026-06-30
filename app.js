@@ -661,21 +661,18 @@ function addParticipant() {
     return;
   }
 
-  const participant = { id: createId(), name, availability: {} };
-  meeting.participants.push(participant);
-  meeting.activeParticipantId = participant.id;
+  createParticipant(meeting, name);
   participantName.value = "";
   saveAndRender();
 }
 
 async function importCalendarAvailability() {
   const meeting = getActiveMeeting();
-  const active = getActiveParticipant(meeting);
   const url = calendarUrl.value.trim();
 
-  if (!meeting || !active) {
+  if (!meeting) {
     participantName.focus();
-    calendarImportStatus.textContent = "Gehitu edo hautatu parte-hartzaile bat lehenengo.";
+    calendarImportStatus.textContent = "Ireki edo sortu bilera bat lehenengo.";
     return;
   }
 
@@ -688,6 +685,18 @@ async function importCalendarAvailability() {
     calendarUrl.focus();
     calendarImportStatus.textContent = "Itsatsi Google Calendar esteka publikoa.";
     return;
+  }
+
+  let active = getActiveParticipant(meeting);
+  if (!active) {
+    const name = participantName.value.trim();
+    if (!name) {
+      participantName.focus();
+      calendarImportStatus.textContent = "Idatzi izena edo hautatu parte-hartzaile bat lehenengo.";
+      return;
+    }
+    active = createParticipant(meeting, name);
+    participantName.value = "";
   }
 
   importCalendar.disabled = true;
@@ -719,6 +728,13 @@ async function importCalendarAvailability() {
   } finally {
     importCalendar.disabled = false;
   }
+}
+
+function createParticipant(meeting, name) {
+  const participant = { id: createId(), name, availability: {} };
+  meeting.participants.push(participant);
+  meeting.activeParticipantId = participant.id;
+  return participant;
 }
 
 function calendarImportError(error) {
