@@ -579,7 +579,7 @@ h2 {
 }
 
 .slot.available-faint {
-  background: color-mix(in srgb, var(--available) 48%, white);
+  background: color-mix(in srgb, var(--available) var(--available-mix, 55%), white);
 }
 
 .slot.maybe {
@@ -587,11 +587,15 @@ h2 {
 }
 
 .slot.maybe-faint {
-  background: color-mix(in srgb, var(--maybe) 52%, white);
+  background: color-mix(in srgb, var(--maybe) var(--maybe-mix, 50%), white);
 }
 
 .slot.mixed {
-  background: linear-gradient(135deg, var(--available) 0 49%, var(--maybe) 50% 100%);
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--available) var(--mixed-available-mix, 60%), white) 0 49%,
+    color-mix(in srgb, var(--maybe) var(--mixed-maybe-mix, 55%), white) 50% 100%
+  );
 }
 
 .slot.unavailable::after {

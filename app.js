@@ -645,6 +645,7 @@ function renderSummaryGrid(meeting) {
       slot.classList.toggle("selected", key === selectedSlotKey);
       slot.dataset.key = key;
       slot.dataset.score = slotScoreLabel(meeting, key);
+      setSummarySlotIntensity(slot, meeting, key);
       slot.tabIndex = 0;
       slot.title = slotTooltip(meeting, key);
       slot.setAttribute("aria-label", `${column.label} ${time}: ${slotTooltip(meeting, key)}`);
@@ -1157,6 +1158,24 @@ function summarySlotClass(meeting, key) {
     return "maybe-faint";
   }
   return "unavailable";
+}
+
+function summarySlotStrength(meeting, key) {
+  if (meeting.participants.length === 0) {
+    return 0;
+  }
+
+  const summary = summarizeSlot(meeting, key);
+  const weightedScore = summary.available + summary.maybe * 0.55;
+  return Math.max(0, Math.min(1, weightedScore / meeting.participants.length));
+}
+
+function setSummarySlotIntensity(slot, meeting, key) {
+  const strength = summarySlotStrength(meeting, key);
+  slot.style.setProperty("--available-mix", `${Math.round(26 + strength * 58)}%`);
+  slot.style.setProperty("--maybe-mix", `${Math.round(24 + strength * 52)}%`);
+  slot.style.setProperty("--mixed-available-mix", `${Math.round(32 + strength * 58)}%`);
+  slot.style.setProperty("--mixed-maybe-mix", `${Math.round(28 + strength * 50)}%`);
 }
 
 function personalSlotSummary(participant, key) {
