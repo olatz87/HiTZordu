@@ -11,64 +11,65 @@
       <div class="brand-lockup">
         <img class="brand-logo" src="assets/hitz-logo.svg" alt="HiTZ">
         <div>
-          <p class="eyebrow">EHU · HiTZ ikerketa taldea</p>
+          <p class="eyebrow" data-i18n="brandEyebrow">EHU · HiTZ ikerketa taldea</p>
           <h1>HiTZordu</h1>
         </div>
       </div>
       <div class="top-actions">
-        <button id="new-meeting" type="button">Bilera berria</button>
+        <button id="language-toggle" type="button" aria-label="Change language">English</button>
+        <button id="new-meeting" type="button" data-i18n="newMeeting">Bilera berria</button>
       </div>
     </header>
 
     <main class="app-shell">
       <aside class="side-panel">
         <section id="share-panel" class="panel-section">
-          <h2>Partekatu</h2>
+          <h2 data-i18n="shareTitle">Partekatu</h2>
           <label>
-            Esteka
+            <span data-i18n="shareLink">Esteka</span>
             <input id="share-link" readonly>
           </label>
-          <button id="copy-share-link" type="button">Esteka kopiatu</button>
+          <button id="copy-share-link" type="button" data-i18n="copyShareLink">Esteka kopiatu</button>
         </section>
 
         <section id="participant-panel" class="panel-section">
-          <h2>Parte-hartzailea</h2>
+          <h2 data-i18n="participantTitle">Parte-hartzailea</h2>
           <label>
-            Izena
-            <input id="participant-name" placeholder="Adib. Olatz">
+            <span data-i18n="nameLabel">Izena</span>
+            <input id="participant-name" placeholder="Adib. Olatz" data-i18n-placeholder="namePlaceholder">
           </label>
-          <button id="add-participant" type="button">Gehitu</button>
+          <button id="add-participant" type="button" data-i18n="addParticipant">Gehitu</button>
           <label>
-            Google Calendar esteka publikoa
+            <span data-i18n="calendarLinkLabel">Google Calendar esteka publikoa</span>
             <input id="calendar-url" placeholder="https://calendar.google.com/calendar/.../embed?...">
           </label>
-          <button id="import-calendar" type="button">Google Calendarretik inportatu</button>
+          <button id="import-calendar" type="button" data-i18n="importCalendar">Google Calendarretik inportatu</button>
           <p id="calendar-import-status" class="muted"></p>
           <div id="participants" class="participants"></div>
         </section>
 
         <section id="best-panel" class="panel-section">
-          <h2>Tarte onenak</h2>
+          <h2 data-i18n="bestTitle">Tarte onenak</h2>
           <div id="best-slots" class="best-slots"></div>
         </section>
 
         <section id="slot-details-panel" class="panel-section">
-          <h2>Orduaren xehetasuna</h2>
+          <h2 data-i18n="slotDetailsTitle">Orduaren xehetasuna</h2>
           <p id="slot-details-title" class="muted">Hautatu gelaxka bat.</p>
           <div id="slot-details" class="slot-details"></div>
         </section>
       </aside>
 
-      <section id="setup-panel" class="setup-panel" aria-label="Bilera konfiguratu">
+      <section id="setup-panel" class="setup-panel" aria-label="Bilera konfiguratu" data-i18n-aria-label="setupPanelAria">
         <div class="setup-inner">
-          <h2>Sortu bilera</h2>
+          <h2 data-i18n="createMeetingTitle">Sortu bilera</h2>
           <div class="setup-grid">
             <label>
-              Bileraren izena
-              <input id="meeting-title" placeholder="Adib. Latxa artikuluaren jarraipena">
+              <span data-i18n="meetingName">Bileraren izena</span>
+              <input id="meeting-title" placeholder="Adib. Latxa artikuluaren jarraipena" data-i18n-placeholder="meetingNamePlaceholder">
             </label>
             <label>
-              Iraupena
+              <span data-i18n="duration">Iraupena</span>
               <select id="duration">
                 <option value="30">30 min</option>
                 <option value="60" selected>60 min</option>
@@ -76,37 +77,37 @@
               </select>
             </label>
             <label>
-              Sortzeko tokena
+              <span data-i18n="createToken">Sortzeko tokena</span>
               <input id="create-token" type="password" autocomplete="off">
             </label>
             <label>
-              Espero diren erantzunak
-              <input id="expected-responses" type="number" min="1" max="500" placeholder="Hautazkoa">
+              <span data-i18n="expectedResponses">Espero diren erantzunak</span>
+              <input id="expected-responses" type="number" min="1" max="500" placeholder="Hautazkoa" data-i18n-placeholder="optionalPlaceholder">
             </label>
             <label>
-              Antolatzailearen emaila
-              <input id="organizer-email" type="email" autocomplete="email" placeholder="Hautazkoa">
+              <span data-i18n="organizerEmail">Antolatzailearen emaila</span>
+              <input id="organizer-email" type="email" autocomplete="email" placeholder="Hautazkoa" data-i18n-placeholder="optionalPlaceholder">
             </label>
             <label>
-              Hasiera
+              <span data-i18n="startTime">Hasiera</span>
               <select id="start-time"></select>
             </label>
             <label>
-              Amaiera
+              <span data-i18n="endTime">Amaiera</span>
               <select id="end-time"></select>
             </label>
           </div>
 
-          <div class="mode-switch" role="group" aria-label="Bilera mota">
-            <button class="active" data-meeting-mode="dated" type="button">Data zehatzak</button>
-            <button data-meeting-mode="weekly" type="button">Bilera orokorra</button>
+          <div class="mode-switch" role="group" aria-label="Bilera mota" data-i18n-aria-label="meetingTypeAria">
+            <button class="active" data-meeting-mode="dated" type="button" data-i18n="specificDates">Data zehatzak</button>
+            <button data-meeting-mode="weekly" type="button" data-i18n="generalMeeting">Bilera orokorra</button>
           </div>
 
           <div id="dated-chooser" class="date-picker">
             <div class="calendar-toolbar">
-              <button id="prev-month" type="button" aria-label="Aurreko hilabetea">&lt;</button>
+              <button id="prev-month" type="button" aria-label="Aurreko hilabetea" data-i18n-aria-label="previousMonth">&lt;</button>
               <h3 id="calendar-title"></h3>
-              <button id="next-month" type="button" aria-label="Hurrengo hilabetea">&gt;</button>
+              <button id="next-month" type="button" aria-label="Hurrengo hilabetea" data-i18n-aria-label="nextMonth">&gt;</button>
             </div>
             <div id="calendar-grid" class="calendar-grid"></div>
             <div id="selected-dates" class="selected-dates"></div>
@@ -116,31 +117,31 @@
             <div id="weekday-choices" class="weekday-choices"></div>
           </div>
 
-          <button id="create-meeting" class="primary-action" type="button">Bilera sortu</button>
+          <button id="create-meeting" class="primary-action" type="button" data-i18n="createMeetingButton">Bilera sortu</button>
           <p id="setup-error" class="form-error" hidden></p>
         </div>
       </section>
 
-      <section id="schedule-panel" class="schedule-panel" aria-label="Erabilgarritasun sarea">
+      <section id="schedule-panel" class="schedule-panel" aria-label="Erabilgarritasun sarea" data-i18n-aria-label="schedulePanelAria">
         <div class="grid-toolbar">
           <div>
             <h2 id="schedule-title">Aukeratu orduak</h2>
             <p id="active-person-label"></p>
           </div>
-          <button id="clear-meeting" type="button">Erantzunak garbitu</button>
+          <button id="clear-meeting" type="button" data-i18n="clearResponses">Erantzunak garbitu</button>
         </div>
-        <div class="legend" aria-label="Egoeren azalpena">
-          <span><i class="legend-dot available-dot"></i>Bai</span>
-          <span><i class="legend-dot maybe-dot"></i>Behar izanez gero</span>
-          <span><i class="legend-dot empty-dot"></i>Hutsik</span>
+        <div class="legend" aria-label="Egoeren azalpena" data-i18n-aria-label="legendAria">
+          <span><i class="legend-dot available-dot"></i><span data-i18n="available">Bai</span></span>
+          <span><i class="legend-dot maybe-dot"></i><span data-i18n="maybe">Behar izanez gero</span></span>
+          <span><i class="legend-dot empty-dot"></i><span data-i18n="empty">Hutsik</span></span>
         </div>
         <div class="availability-layout">
-          <section class="availability-column" aria-label="Nire erabilgarritasuna">
-            <h3>Nire egutegia</h3>
+          <section class="availability-column" aria-label="Nire erabilgarritasuna" data-i18n-aria-label="personalCalendarAria">
+            <h3 data-i18n="myCalendar">Nire egutegia</h3>
             <div id="personal-grid" class="availability-grid"></div>
           </section>
-          <section class="availability-column" aria-label="Taldearen emaitza">
-            <h3>Taldearen egutegia</h3>
+          <section class="availability-column" aria-label="Taldearen emaitza" data-i18n-aria-label="teamCalendarAria">
+            <h3 data-i18n="teamCalendar">Taldearen egutegia</h3>
             <div id="summary-grid" class="availability-grid"></div>
           </section>
         </div>

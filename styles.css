@@ -140,8 +140,9 @@ h2 {
 
 .top-actions {
   display: flex;
+  gap: 8px;
   justify-content: flex-end;
-  width: min(100%, 220px);
+  width: min(100%, 340px);
 }
 
 .top-actions button,
@@ -155,6 +156,10 @@ h2 {
 .primary-action:hover {
   border-color: var(--accent-dark);
   background: color-mix(in srgb, var(--accent) 78%, white);
+}
+
+#language-toggle {
+  background: #fff;
 }
 
 .app-shell {

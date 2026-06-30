@@ -5,16 +5,170 @@ const stateRank = {
 };
 
 const weekdays = [
-  { key: "weekday-1", short: "Al", long: "Astelehena" },
-  { key: "weekday-2", short: "Ar", long: "Asteartea" },
-  { key: "weekday-3", short: "Az", long: "Asteazkena" },
-  { key: "weekday-4", short: "Og", long: "Osteguna" },
-  { key: "weekday-5", short: "Or", long: "Ostirala" },
-  { key: "weekday-6", short: "Lr", long: "Larunbata" },
-  { key: "weekday-0", short: "Ig", long: "Igandea" },
+  { key: "weekday-1", short: { eu: "Al", en: "Mon" }, long: { eu: "Astelehena", en: "Monday" } },
+  { key: "weekday-2", short: { eu: "Ar", en: "Tue" }, long: { eu: "Asteartea", en: "Tuesday" } },
+  { key: "weekday-3", short: { eu: "Az", en: "Wed" }, long: { eu: "Asteazkena", en: "Wednesday" } },
+  { key: "weekday-4", short: { eu: "Og", en: "Thu" }, long: { eu: "Osteguna", en: "Thursday" } },
+  { key: "weekday-5", short: { eu: "Or", en: "Fri" }, long: { eu: "Ostirala", en: "Friday" } },
+  { key: "weekday-6", short: { eu: "Lr", en: "Sat" }, long: { eu: "Larunbata", en: "Saturday" } },
+  { key: "weekday-0", short: { eu: "Ig", en: "Sun" }, long: { eu: "Igandea", en: "Sunday" } },
 ];
 
 const storageKey = "hitzordu.store.v3";
+const languageKey = "hitzordu.language";
+const supportedLanguages = ["eu", "en"];
+const translations = {
+  eu: {
+    addParticipant: "Gehitu",
+    available: "Bai",
+    bestEmptyNoResponses: "Oraindik ez dago erantzunik.",
+    bestEmptyNoPositive: "Ez dago tarte positiborik iraupen osoarekin.",
+    bestFallback: "Ez dago aukera bateraturik; hurbilenak",
+    bestFlexible: "Aukera onenak, if-need-be kontuan",
+    bestOptimal: "Emaitza optimoak",
+    bestTitle: "Tarte onenak",
+    bestWithMaybe: "Denek bai edo behar izanez gero",
+    brandEyebrow: "EHU · HiTZ ikerketa taldea",
+    calendarImportOnlyDated: "Google Calendar inportazioa data zehatzetako bileretan bakarrik dago erabilgarri.",
+    calendarImportOnlyDatedShort: "Inportazioa data zehatzetako bileretan bakarrik dago erabilgarri.",
+    calendarImportRead: "{count} egutegi irakurrita; libre dauden tarteak markatu dira.",
+    calendarNotAccessible: "Egutegia ez da publikoa edo ezin da irakurri.",
+    calendarTooLarge: "Egutegia handiegia da.",
+    calendarLinkLabel: "Google Calendar esteka publikoa",
+    calendarReading: "Egutegia irakurtzen...",
+    clearResponses: "Erantzunak garbitu",
+    copyShareLink: "Esteka kopiatu",
+    createMeetingButton: "Bilera sortu",
+    createMeetingTitle: "Sortu bilera",
+    createToken: "Sortzeko tokena",
+    datedMeetingRequired: "Inportazioa data zehatzetako bileretan bakarrik dago erabilgarri.",
+    duration: "Iraupena",
+    emailInvalid: "Email helbidea ez da baliozkoa.",
+    empty: "Hutsik",
+    endAfterStart: "Amaiera hasiera baino beranduago jarri.",
+    endTime: "Amaiera",
+    expectedInvalid: "Espero diren erantzunak 1 eta 500 arteko zenbaki osoa izan behar du.",
+    expectedResponses: "Espero diren erantzunak",
+    generalMeeting: "Bilera orokorra",
+    importCalendar: "Google Calendarretik inportatu",
+    importCalendarFailed: "Ezin izan da egutegia irakurri.",
+    importCalendarNoMeeting: "Ireki edo sortu bilera bat lehenengo.",
+    importCalendarNoName: "Idatzi izena edo hautatu parte-hartzaile bat lehenengo.",
+    importCalendarNoUrl: "Itsatsi Google Calendar esteka publikoa.",
+    invalidCalendarFeed: "Estekak ez du egutegi baliozkorik eman.",
+    maybe: "Behar izanez gero",
+    meetingName: "Bileraren izena",
+    meetingNamePlaceholder: "Adib. Latxa artikuluaren jarraipena",
+    meetingTypeAria: "Bilera mota",
+    myCalendar: "Nire egutegia",
+    nameLabel: "Izena",
+    namePlaceholder: "Adib. Olatz",
+    newMeeting: "Bilera berria",
+    nextMonth: "Hurrengo hilabetea",
+    noActiveParticipant: "Gehitu parte-hartzaile bat orduak markatzeko",
+    optionalPlaceholder: "Hautazkoa",
+    organizerEmail: "Antolatzailearen emaila",
+    organizerEmailRequired: "Sartu antolatzailearen emaila abisua bidaltzeko.",
+    participantClickHelp: "{name}: klik bakoitza Bai -> Behar izanez gero -> Hutsik",
+    participantRemove: "{name} kendu",
+    participantTitle: "Parte-hartzailea",
+    personalCalendarAria: "Nire erabilgarritasuna",
+    previousMonth: "Aurreko hilabetea",
+    schedulePanelAria: "Erabilgarritasun sarea",
+    scheduleTitleDefault: "Aukeratu orduak",
+    selectAtLeastOneDay: "Aukeratu gutxienez egun bat.",
+    selectedDatesEmpty: "Klikatu egutegiko egunak.",
+    setupPanelAria: "Bilera konfiguratu",
+    shareLink: "Esteka",
+    shareTitle: "Partekatu",
+    slotDetailsDefault: "Hautatu gelaxka bat.",
+    slotDetailsTitle: "Orduaren xehetasuna",
+    specificDates: "Data zehatzak",
+    startTime: "Hasiera",
+    legendAria: "Egoeren azalpena",
+    teamCalendar: "Taldearen egutegia",
+    teamCalendarAria: "Taldearen emaitza",
+    tokenInvalid: "Tokena ez da zuzena edo ezin izan da bilera sortu.",
+    tokenRequired: "Sartu sortzeko tokena.",
+    unavailable: "Ez / hutsik",
+    unsupportedCalendarUrl: "Erabili Google Calendar embed/newembed edo public .ics esteka bat.",
+  },
+  en: {
+    addParticipant: "Add",
+    available: "Yes",
+    bestEmptyNoResponses: "There are no responses yet.",
+    bestEmptyNoPositive: "No positive slots cover the full duration.",
+    bestFallback: "No shared option; closest matches",
+    bestFlexible: "Best options including if-need-be",
+    bestOptimal: "Optimal results",
+    bestTitle: "Best slots",
+    bestWithMaybe: "Everyone yes or if-need-be",
+    brandEyebrow: "EHU · HiTZ research group",
+    calendarImportOnlyDated: "Google Calendar import is only available for meetings with specific dates.",
+    calendarImportOnlyDatedShort: "Import is only available for meetings with specific dates.",
+    calendarImportRead: "{count} calendars read; free slots have been marked.",
+    calendarNotAccessible: "The calendar is not public or could not be read.",
+    calendarTooLarge: "The calendar is too large.",
+    calendarLinkLabel: "Public Google Calendar link",
+    calendarReading: "Reading calendar...",
+    clearResponses: "Clear responses",
+    copyShareLink: "Copy link",
+    createMeetingButton: "Create meeting",
+    createMeetingTitle: "Create meeting",
+    createToken: "Creation token",
+    datedMeetingRequired: "Import is only available for meetings with specific dates.",
+    duration: "Duration",
+    emailInvalid: "The email address is not valid.",
+    empty: "Empty",
+    endAfterStart: "Set the end time later than the start time.",
+    endTime: "End",
+    expectedInvalid: "Expected responses must be a whole number between 1 and 500.",
+    expectedResponses: "Expected responses",
+    generalMeeting: "General meeting",
+    importCalendar: "Import from Google Calendar",
+    importCalendarFailed: "Could not read the calendar.",
+    importCalendarNoMeeting: "Open or create a meeting first.",
+    importCalendarNoName: "Enter a name or select a participant first.",
+    importCalendarNoUrl: "Paste the public Google Calendar link.",
+    invalidCalendarFeed: "The link did not return a valid calendar.",
+    maybe: "If need be",
+    meetingName: "Meeting name",
+    meetingNamePlaceholder: "E.g. Latxa paper follow-up",
+    meetingTypeAria: "Meeting type",
+    myCalendar: "My calendar",
+    nameLabel: "Name",
+    namePlaceholder: "E.g. Olatz",
+    newMeeting: "New meeting",
+    nextMonth: "Next month",
+    noActiveParticipant: "Add a participant to mark times",
+    optionalPlaceholder: "Optional",
+    organizerEmail: "Organizer email",
+    organizerEmailRequired: "Enter the organizer email to send the notification.",
+    participantClickHelp: "{name}: each click cycles Yes -> If need be -> Empty",
+    participantRemove: "Remove {name}",
+    participantTitle: "Participant",
+    personalCalendarAria: "My availability",
+    previousMonth: "Previous month",
+    schedulePanelAria: "Availability grid",
+    scheduleTitleDefault: "Choose times",
+    selectAtLeastOneDay: "Choose at least one day.",
+    selectedDatesEmpty: "Click days in the calendar.",
+    setupPanelAria: "Configure meeting",
+    shareLink: "Link",
+    shareTitle: "Share",
+    slotDetailsDefault: "Select a cell.",
+    slotDetailsTitle: "Slot details",
+    specificDates: "Specific dates",
+    startTime: "Start",
+    legendAria: "Status legend",
+    teamCalendar: "Team calendar",
+    teamCalendarAria: "Team result",
+    tokenInvalid: "The token is incorrect or the meeting could not be created.",
+    tokenRequired: "Enter the creation token.",
+    unavailable: "No / empty",
+    unsupportedCalendarUrl: "Use a Google Calendar embed/newembed or public .ics link.",
+  },
+};
 
 let store = createDefaultStore();
 let draftMode = "dated";
@@ -26,6 +180,7 @@ let dragPaintState = null;
 let backendAvailable = false;
 let createTokenRequired = false;
 let saveTimer = null;
+let currentLanguage = readStoredLanguage();
 
 const participantsEl = document.querySelector("#participants");
 const participantName = document.querySelector("#participant-name");
@@ -62,6 +217,7 @@ const slotDetails = document.querySelector("#slot-details");
 const shareLink = document.querySelector("#share-link");
 const copyShareLink = document.querySelector("#copy-share-link");
 const setupError = document.querySelector("#setup-error");
+const languageToggle = document.querySelector("#language-toggle");
 
 document.querySelector("#new-meeting").addEventListener("click", showSetup);
 document.querySelector("#create-meeting").addEventListener("click", createMeeting);
@@ -71,6 +227,7 @@ document.querySelector("#clear-meeting").addEventListener("click", clearActiveMe
 document.querySelector("#prev-month").addEventListener("click", () => changeCalendarMonth(-1));
 document.querySelector("#next-month").addEventListener("click", () => changeCalendarMonth(1));
 copyShareLink.addEventListener("click", copyCurrentShareLink);
+languageToggle.addEventListener("click", toggleLanguage);
 
 modeButtons.forEach((button) => {
   button.addEventListener("click", () => {
@@ -96,6 +253,7 @@ window.addEventListener("pointercancel", () => {
 init();
 
 async function init() {
+  applyTranslations();
   fillTimeSelects();
   store = await loadStore();
   applyMeetingFromUrl();
@@ -161,8 +319,55 @@ function createDefaultStore() {
   };
 }
 
+function readStoredLanguage() {
+  const saved = localStorage.getItem(languageKey);
+  return supportedLanguages.includes(saved) ? saved : "eu";
+}
+
+function toggleLanguage() {
+  currentLanguage = currentLanguage === "eu" ? "en" : "eu";
+  localStorage.setItem(languageKey, currentLanguage);
+  render();
+}
+
+function locale() {
+  return currentLanguage === "eu" ? "eu" : "en-GB";
+}
+
+function t(key, values = {}) {
+  const template = translations[currentLanguage][key] || translations.eu[key] || key;
+  return Object.entries(values).reduce(
+    (text, [name, value]) => text.replaceAll(`{${name}}`, value),
+    template,
+  );
+}
+
+function weekdayLabel(day, field) {
+  return day?.[field]?.[currentLanguage] || day?.[field]?.eu || "";
+}
+
+function applyTranslations() {
+  document.documentElement.lang = currentLanguage;
+  languageToggle.textContent = currentLanguage === "eu" ? "English" : "Euskara";
+  languageToggle.setAttribute(
+    "aria-label",
+    currentLanguage === "eu" ? "Change language to English" : "Aldatu hizkuntza euskarara",
+  );
+
+  document.querySelectorAll("[data-i18n]").forEach((element) => {
+    element.textContent = t(element.dataset.i18n);
+  });
+  document.querySelectorAll("[data-i18n-placeholder]").forEach((element) => {
+    element.placeholder = t(element.dataset.i18nPlaceholder);
+  });
+  document.querySelectorAll("[data-i18n-aria-label]").forEach((element) => {
+    element.setAttribute("aria-label", t(element.dataset.i18nAriaLabel));
+  });
+}
+
 function render() {
   const meeting = getActiveMeeting();
+  applyTranslations();
   renderShareLink(meeting);
   renderSetupMode();
   renderParticipants(meeting);
@@ -204,7 +409,7 @@ function renderSetupMode() {
 }
 
 function renderCalendar() {
-  calendarTitle.textContent = new Intl.DateTimeFormat("eu", {
+  calendarTitle.textContent = new Intl.DateTimeFormat(locale(), {
     month: "long",
     year: "numeric",
   }).format(calendarMonth);
@@ -213,7 +418,7 @@ function renderCalendar() {
   weekdays.forEach((day) => {
     const header = document.createElement("div");
     header.className = "calendar-weekday";
-    header.textContent = day.short;
+    header.textContent = weekdayLabel(day, "short");
     calendarGrid.append(header);
   });
 
@@ -242,7 +447,7 @@ function renderDraftDates() {
   if (draftDates.length === 0) {
     const empty = document.createElement("p");
     empty.className = "muted";
-    empty.textContent = "Klikatu egutegiko egunak.";
+    empty.textContent = t("selectedDatesEmpty");
     selectedDatesEl.append(empty);
     return;
   }
@@ -265,7 +470,7 @@ function renderWeekdayChoices() {
     button.type = "button";
     button.className = "weekday-choice";
     button.classList.toggle("selected", draftWeekdays.includes(day.key));
-    button.textContent = day.long;
+    button.textContent = weekdayLabel(day, "long");
     button.addEventListener("click", () => {
       draftWeekdays = draftWeekdays.includes(day.key)
         ? draftWeekdays.filter((item) => item !== day.key)
@@ -289,7 +494,7 @@ function renderParticipants(meeting) {
   importCalendar.disabled = meeting.kind !== "dated";
   calendarUrl.disabled = meeting.kind !== "dated";
   if (meeting.kind === "weekly") {
-    calendarImportStatus.textContent = "Google Calendar inportazioa data zehatzetako bileretan bakarrik dago erabilgarri.";
+    calendarImportStatus.textContent = t("calendarImportOnlyDated");
   }
 
   meeting.participants.forEach((participant) => {
@@ -307,7 +512,7 @@ function renderParticipants(meeting) {
 
     const remove = document.createElement("button");
     remove.type = "button";
-    remove.setAttribute("aria-label", `${participant.name} kendu`);
+    remove.setAttribute("aria-label", t("participantRemove", { name: participant.name }));
     remove.textContent = "x";
     remove.addEventListener("click", () => removeParticipant(participant.id));
 
@@ -317,8 +522,8 @@ function renderParticipants(meeting) {
 
   const active = getActiveParticipant(meeting);
   activePersonLabel.textContent = active
-    ? `${active.name}: klik bakoitza Bai -> Behar izanez gero -> Hutsik`
-    : "Gehitu parte-hartzaile bat orduak markatzeko";
+    ? t("participantClickHelp", { name: active.name })
+    : t("noActiveParticipant");
 }
 
 function renderGrids(meeting) {
@@ -418,8 +623,8 @@ function renderBestSlots(meeting) {
     const item = document.createElement("p");
     item.className = "muted";
     item.textContent = meeting.participants.length === 0
-      ? "Oraindik ez dago erantzunik."
-      : "Ez dago tarte positiborik iraupen osoarekin.";
+      ? t("bestEmptyNoResponses")
+      : t("bestEmptyNoPositive");
     bestSlotsEl.append(item);
     return;
   }
@@ -429,19 +634,19 @@ function renderBestSlots(meeting) {
   const fallbackSlots = rankedSlots.filter((slot) => slot.kind === "fallback").slice(0, 5);
 
   if (optimalSlots.length > 0) {
-    appendBestSlotGroup("Emaitza optimoak", optimalSlots, meeting);
+    appendBestSlotGroup(t("bestOptimal"), optimalSlots, meeting);
     if (flexibleSlots.length > 0) {
-      appendBestSlotGroup("Denek bai edo behar izanez gero", flexibleSlots, meeting);
+      appendBestSlotGroup(t("bestWithMaybe"), flexibleSlots, meeting);
     }
     return;
   }
 
   if (flexibleSlots.length > 0) {
-    appendBestSlotGroup("Aukera onenak, if-need-be kontuan", flexibleSlots, meeting);
+    appendBestSlotGroup(t("bestFlexible"), flexibleSlots, meeting);
     return;
   }
 
-  appendBestSlotGroup("Ez dago aukera bateraturik; hurbilenak", fallbackSlots, meeting);
+  appendBestSlotGroup(t("bestFallback"), fallbackSlots, meeting);
 }
 
 function appendBestSlotGroup(title, slots, meeting) {
@@ -456,7 +661,7 @@ function appendBestSlotGroup(title, slots, meeting) {
     const item = document.createElement("li");
     const button = document.createElement("button");
     button.type = "button";
-    button.textContent = `${formatSlotBlock(meeting, slot)} - ${slot.available} bai, ${slot.maybe} behar izanez gero`;
+    button.textContent = `${formatSlotBlock(meeting, slot)} - ${slot.available} ${t("available").toLowerCase()}, ${slot.maybe} ${t("maybe").toLowerCase()}`;
     button.addEventListener("click", () => {
       selectedSlotKey = slot.key;
       render();
@@ -473,7 +678,7 @@ function renderSlotDetails(meeting) {
   slotDetails.innerHTML = "";
 
   if (!meeting || !selectedSlotKey) {
-    slotDetailsTitle.textContent = "Hautatu gelaxka bat.";
+    slotDetailsTitle.textContent = t("slotDetailsDefault");
     return;
   }
 
@@ -481,9 +686,9 @@ function renderSlotDetails(meeting) {
   const groups = slotResponseGroups(meeting, selectedSlotKey);
 
   [
-    ["Bai", groups.available],
-    ["Behar izanez gero", groups.maybe],
-    ["Ez / hutsik", groups.unavailable],
+    [t("available"), groups.available],
+    [t("maybe"), groups.maybe],
+    [t("unavailable"), groups.unavailable],
   ].forEach(([title, names]) => {
     const group = document.createElement("div");
     group.className = "slot-detail-group";
@@ -538,7 +743,7 @@ async function createMeeting() {
 
   const token = createToken.value;
   if (!token && createTokenRequired) {
-    setSetupError("Sartu sortzeko tokena.");
+    setSetupError(t("tokenRequired"));
     createToken.focus();
     return;
   }
@@ -550,12 +755,12 @@ async function createMeeting() {
 
   const selected = draftMode === "dated" ? draftDates : draftWeekdays;
   if (selected.length === 0) {
-    setSetupError("Aukeratu gutxienez egun bat.");
+    setSetupError(t("selectAtLeastOneDay"));
     return;
   }
 
   if (timeToMinutes(startTime.value) >= timeToMinutes(endTime.value)) {
-    setSetupError("Amaiera hasiera baino beranduago jarri.");
+    setSetupError(t("endAfterStart"));
     endTime.focus();
     return;
   }
@@ -576,7 +781,7 @@ async function createMeeting() {
 
   const created = await createMeetingOnServer(meeting, token);
   if (!created) {
-    setSetupError("Tokena ez da zuzena edo ezin izan da bilera sortu.");
+    setSetupError(t("tokenInvalid"));
     createToken.focus();
     return;
   }
@@ -601,19 +806,19 @@ function readNotificationSettings() {
   }
 
   if (!Number.isInteger(expected) || expected < 1 || expected > 500) {
-    setSetupError("Espero diren erantzunak 1 eta 500 arteko zenbaki osoa izan behar du.");
+    setSetupError(t("expectedInvalid"));
     expectedResponses.focus();
     return null;
   }
 
   if (!email) {
-    setSetupError("Sartu antolatzailearen emaila abisua bidaltzeko.");
+    setSetupError(t("organizerEmailRequired"));
     organizerEmail.focus();
     return null;
   }
 
   if (!organizerEmail.validity.valid) {
-    setSetupError("Email helbidea ez da baliozkoa.");
+    setSetupError(t("emailInvalid"));
     organizerEmail.focus();
     return null;
   }
@@ -669,18 +874,18 @@ async function importCalendarAvailability() {
 
   if (!meeting) {
     participantName.focus();
-    calendarImportStatus.textContent = "Ireki edo sortu bilera bat lehenengo.";
+    calendarImportStatus.textContent = t("importCalendarNoMeeting");
     return;
   }
 
   if (meeting.kind !== "dated") {
-    calendarImportStatus.textContent = "Inportazioa data zehatzetako bileretan bakarrik dago erabilgarri.";
+    calendarImportStatus.textContent = t("calendarImportOnlyDatedShort");
     return;
   }
 
   if (!url) {
     calendarUrl.focus();
-    calendarImportStatus.textContent = "Itsatsi Google Calendar esteka publikoa.";
+    calendarImportStatus.textContent = t("importCalendarNoUrl");
     return;
   }
 
@@ -689,7 +894,7 @@ async function importCalendarAvailability() {
     const name = participantName.value.trim();
     if (!name) {
       participantName.focus();
-      calendarImportStatus.textContent = "Idatzi izena edo hautatu parte-hartzaile bat lehenengo.";
+      calendarImportStatus.textContent = t("importCalendarNoName");
       return;
     }
     active = createParticipant(meeting, name);
@@ -697,7 +902,7 @@ async function importCalendarAvailability() {
   }
 
   importCalendar.disabled = true;
-  calendarImportStatus.textContent = "Egutegia irakurtzen...";
+  calendarImportStatus.textContent = t("calendarReading");
 
   try {
     const response = await fetch("/api/calendar/availability", {
@@ -718,10 +923,10 @@ async function importCalendarAvailability() {
         delete active.availability[key];
       }
     });
-    calendarImportStatus.textContent = `${result.calendars} egutegi irakurrita; libre dauden tarteak markatu dira.`;
+    calendarImportStatus.textContent = t("calendarImportRead", { count: result.calendars });
     saveAndRender();
   } catch {
-    calendarImportStatus.textContent = "Ezin izan da egutegia irakurri.";
+    calendarImportStatus.textContent = t("importCalendarFailed");
   } finally {
     importCalendar.disabled = false;
   }
@@ -736,13 +941,13 @@ function createParticipant(meeting, name) {
 
 function calendarImportError(error) {
   const messages = {
-    calendar_feed_not_accessible: "Egutegia ez da publikoa edo ezin da irakurri.",
-    calendar_feed_too_large: "Egutegia handiegia da.",
-    dated_meeting_required: "Inportazioa data zehatzetako bileretan bakarrik dago erabilgarri.",
-    invalid_calendar_feed: "Estekak ez du egutegi baliozkorik eman.",
-    unsupported_calendar_url: "Erabili Google Calendar embed/newembed edo public .ics esteka bat.",
+    calendar_feed_not_accessible: t("calendarNotAccessible"),
+    calendar_feed_too_large: t("calendarTooLarge"),
+    dated_meeting_required: t("datedMeetingRequired"),
+    invalid_calendar_feed: t("invalidCalendarFeed"),
+    unsupported_calendar_url: t("unsupportedCalendarUrl"),
   };
-  return messages[error] || "Ezin izan da egutegia irakurri.";
+  return messages[error] || t("importCalendarFailed");
 }
 
 function removeParticipant(id) {
@@ -856,9 +1061,9 @@ function slotResponseGroups(meeting, key) {
 function slotTooltip(meeting, key) {
   const groups = slotResponseGroups(meeting, key);
   return [
-    `Bai: ${formatNames(groups.available)}`,
-    `Behar izanez gero: ${formatNames(groups.maybe)}`,
-    `Ez / hutsik: ${formatNames(groups.unavailable)}`,
+    `${t("available")}: ${formatNames(groups.available)}`,
+    `${t("maybe")}: ${formatNames(groups.maybe)}`,
+    `${t("unavailable")}: ${formatNames(groups.unavailable)}`,
   ].join("\n");
 }
 
@@ -894,12 +1099,12 @@ function summarySlotClass(meeting, key) {
 function personalSlotSummary(participant, key) {
   const value = participant?.availability[key];
   if (value === "available") {
-    return "Bai";
+    return t("available");
   }
   if (value === "maybe") {
-    return "Behar izanez gero";
+    return t("maybe");
   }
-  return "Hutsik";
+  return t("empty");
 }
 
 function slotScoreLabel(meeting, key) {
@@ -1032,7 +1237,7 @@ function meetingColumns(meeting) {
   if (meeting.kind === "weekly") {
     return meeting.weekdays.map((key) => ({
       key,
-      label: weekdays.find((day) => day.key === key)?.long || key,
+      label: weekdayLabel(weekdays.find((day) => day.key === key), "long") || key,
     }));
   }
 
@@ -1115,7 +1320,7 @@ function formatSlot(meeting, key) {
 }
 
 function formatDate(date) {
-  return new Intl.DateTimeFormat("eu", {
+  return new Intl.DateTimeFormat(locale(), {
     weekday: "short",
     month: "short",
     day: "numeric",
