@@ -1172,11 +1172,12 @@ function summarySlotStrength(meeting, key) {
 
 function setSummarySlotIntensity(slot, meeting, key) {
   const strength = summarySlotStrength(meeting, key);
-  const contrast = strength ** 1.35;
-  slot.style.setProperty("--available-mix", `${Math.round(10 + contrast * 88)}%`);
-  slot.style.setProperty("--maybe-mix", `${Math.round(8 + contrast * 86)}%`);
-  slot.style.setProperty("--mixed-available-mix", `${Math.round(14 + contrast * 84)}%`);
-  slot.style.setProperty("--mixed-maybe-mix", `${Math.round(12 + contrast * 82)}%`);
+  const contrast = Math.sqrt(strength);
+  slot.style.setProperty("--available-mix", `${Math.round(4 + contrast * 96)}%`);
+  slot.style.setProperty("--maybe-mix", `${Math.round(4 + contrast * 92)}%`);
+  slot.style.setProperty("--mixed-available-mix", `${Math.round(6 + contrast * 94)}%`);
+  slot.style.setProperty("--mixed-maybe-mix", `${Math.round(6 + contrast * 90)}%`);
+  slot.style.setProperty("--summary-outline-mix", `${Math.round(20 + contrast * 55)}%`);
 }
 
 function personalSlotSummary(participant, key) {
