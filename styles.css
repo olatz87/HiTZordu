@@ -1,16 +1,24 @@
 :root {
   --ink: #161616;
-  --muted: #5e646b;
-  --line: #d9dde1;
-  --page: #f4f5f2;
+  --muted: #625e57;
+  --line: #b1ab9f;
+  --page: #eeece9;
   --panel: #ffffff;
-  --available: #14846f;
-  --maybe: #d19a1d;
-  --unavailable: #dfe3e7;
-  --accent: #b3172d;
-  --accent-dark: #850f20;
-  --surface-soft: #f8f3f4;
-  --danger: #a3202d;
+  --uniberdea: #5fd790;
+  --berde-leuna: #b0fbc1;
+  --egurra: #b1ab9f;
+  --lurra: #eeece9;
+  --egunsentia: #ff8d78;
+  --zerua: #608ee4;
+  --argia: #eeec46;
+  --behe-lainoa: #a8a4ee;
+  --available: var(--berde-leuna);
+  --maybe: var(--argia);
+  --unavailable: var(--lurra);
+  --accent: var(--uniberdea);
+  --accent-dark: #2f7f56;
+  --surface-soft: #f5f3f0;
+  --danger: #9c463b;
   --shadow: 0 14px 32px rgba(22, 22, 22, 0.1);
 }
 
@@ -138,7 +146,7 @@ h2 {
 
 .top-actions button,
 .primary-action {
-  color: #fff;
+  color: var(--ink);
   border-color: var(--accent);
   background: var(--accent);
 }
@@ -146,7 +154,7 @@ h2 {
 .top-actions button:hover,
 .primary-action:hover {
   border-color: var(--accent-dark);
-  background: var(--accent-dark);
+  background: color-mix(in srgb, var(--accent) 78%, white);
 }
 
 .app-shell {
@@ -161,7 +169,7 @@ h2 {
   gap: 16px;
   padding: 20px;
   border-right: 1px solid var(--line);
-  background: #fbfbfa;
+  background: var(--surface-soft);
 }
 
 .panel-section {
@@ -304,7 +312,7 @@ h2 {
   padding: 4px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: #f0ecec;
+  background: var(--lurra);
 }
 
 .mode-switch button {
@@ -368,7 +376,7 @@ h2 {
 
 .calendar-day.selected,
 .weekday-choice.selected {
-  color: #fff;
+  color: var(--ink);
   border-color: var(--accent);
   background: var(--accent);
 }
@@ -432,11 +440,11 @@ h2 {
 }
 
 .available-dot {
-  background: color-mix(in srgb, var(--available) 72%, white);
+  background: var(--available);
 }
 
 .maybe-dot {
-  background: color-mix(in srgb, var(--maybe) 62%, white);
+  background: var(--maybe);
 }
 
 .empty-dot {
@@ -470,7 +478,7 @@ h2 {
   box-shadow: var(--shadow);
   user-select: none;
   max-width: 100%;
-  scrollbar-color: var(--accent) #eceff1;
+  scrollbar-color: var(--accent) var(--lurra);
 }
 
 .grid-cell {
@@ -488,7 +496,7 @@ h2 {
   place-items: center;
   padding: 8px;
   color: var(--muted);
-  background: #fbfcfd;
+  background: #fff;
   font-size: 0.78rem;
   font-weight: 800;
 }
@@ -510,7 +518,7 @@ h2 {
 }
 
 .grid-cell.gap-before {
-  border-left: 4px double #9da8b2;
+  border-left: 4px double var(--egurra);
 }
 
 .slot {
@@ -529,29 +537,29 @@ h2 {
   right: 7px;
   top: 50%;
   transform: translateY(-50%);
-  color: rgba(23, 32, 42, 0.56);
+  color: rgba(22, 22, 22, 0.58);
   font-size: 0.72rem;
   font-weight: 750;
 }
 
 .slot.available {
-  background: color-mix(in srgb, var(--available) 72%, white);
+  background: var(--available);
 }
 
 .slot.available-faint {
-  background: color-mix(in srgb, var(--available) 30%, white);
+  background: color-mix(in srgb, var(--available) 42%, white);
 }
 
 .slot.maybe {
-  background: color-mix(in srgb, var(--maybe) 62%, white);
+  background: var(--maybe);
 }
 
 .slot.maybe-faint {
-  background: color-mix(in srgb, var(--maybe) 28%, white);
+  background: color-mix(in srgb, var(--maybe) 36%, white);
 }
 
 .slot.mixed {
-  background: linear-gradient(135deg, #8ecbb8 0 49%, #f0c66a 50% 100%);
+  background: linear-gradient(135deg, var(--available) 0 49%, var(--maybe) 50% 100%);
 }
 
 .slot.unavailable::after {
