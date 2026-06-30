@@ -12,8 +12,8 @@
   --zerua: #608ee4;
   --argia: #eeec46;
   --behe-lainoa: #a8a4ee;
-  --available: var(--berde-leuna);
-  --maybe: var(--argia);
+  --available: color-mix(in srgb, var(--uniberdea) 58%, white);
+  --maybe: color-mix(in srgb, var(--zerua) 36%, white);
   --unavailable: var(--lurra);
   --accent: var(--uniberdea);
   --accent-dark: #2f7f56;
@@ -547,7 +547,7 @@ h2 {
 }
 
 .slot.available-faint {
-  background: color-mix(in srgb, var(--available) 42%, white);
+  background: color-mix(in srgb, var(--available) 48%, white);
 }
 
 .slot.maybe {
@@ -555,7 +555,7 @@ h2 {
 }
 
 .slot.maybe-faint {
-  background: color-mix(in srgb, var(--maybe) 36%, white);
+  background: color-mix(in srgb, var(--maybe) 52%, white);
 }
 
 .slot.mixed {
