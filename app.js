@@ -41,8 +41,11 @@ const translations = {
     createMeetingButton: "Bilera sortu",
     createMeetingTitle: "Sortu bilera",
     createToken: "Sortzeko tokena",
+    cancel: "Utzi",
     datedMeetingRequired: "Inportazioa data zehatzetako bileretan bakarrik dago erabilgarri.",
     duration: "Iraupena",
+    editParticipant: "Editatu",
+    editParticipantAria: "{name} editatu",
     emailInvalid: "Email helbidea ez da baliozkoa.",
     empty: "Hutsik",
     endAfterStart: "Amaiera hasiera baino beranduago jarri.",
@@ -70,10 +73,10 @@ const translations = {
     organizerEmail: "Antolatzailearen emaila",
     organizerEmailRequired: "Sartu antolatzailearen emaila abisua bidaltzeko.",
     participantClickHelp: "{name}: klik bakoitza Bai -> Behar izanez gero -> Hutsik",
-    participantRemove: "{name} kendu",
     participantTitle: "Parte-hartzailea",
     personalCalendarAria: "Nire erabilgarritasuna",
     previousMonth: "Aurreko hilabetea",
+    save: "Gorde",
     schedulePanelAria: "Erabilgarritasun sarea",
     scheduleTitleDefault: "Aukeratu orduak",
     selectAtLeastOneDay: "Aukeratu gutxienez egun bat.",
@@ -116,8 +119,11 @@ const translations = {
     createMeetingButton: "Create meeting",
     createMeetingTitle: "Create meeting",
     createToken: "Creation token",
+    cancel: "Cancel",
     datedMeetingRequired: "Import is only available for meetings with specific dates.",
     duration: "Duration",
+    editParticipant: "Edit",
+    editParticipantAria: "Edit {name}",
     emailInvalid: "The email address is not valid.",
     empty: "Empty",
     endAfterStart: "Set the end time later than the start time.",
@@ -145,10 +151,10 @@ const translations = {
     organizerEmail: "Organizer email",
     organizerEmailRequired: "Enter the organizer email to send the notification.",
     participantClickHelp: "{name}: each click cycles Yes -> If need be -> Empty",
-    participantRemove: "Remove {name}",
     participantTitle: "Participant",
     personalCalendarAria: "My availability",
     previousMonth: "Previous month",
+    save: "Save",
     schedulePanelAria: "Availability grid",
     scheduleTitleDefault: "Choose times",
     selectAtLeastOneDay: "Choose at least one day.",
@@ -181,6 +187,7 @@ let backendAvailable = false;
 let createTokenRequired = false;
 let saveTimer = null;
 let currentLanguage = readStoredLanguage();
+let editingParticipantId = null;
 
 const participantsEl = document.querySelector("#participants");
 const participantName = document.querySelector("#participant-name");
@@ -502,21 +509,63 @@ function renderParticipants(meeting) {
     row.className = "participant";
     row.classList.toggle("active", participant.id === meeting.activeParticipantId);
 
+    if (participant.id === editingParticipantId) {
+      const input = document.createElement("input");
+      input.className = "participant-name-edit";
+      input.value = participant.name;
+      input.setAttribute("aria-label", t("nameLabel"));
+
+      const save = document.createElement("button");
+      save.type = "button";
+      save.className = "participant-edit";
+      save.textContent = t("save");
+      save.addEventListener("click", () => saveParticipantName(participant.id, input.value));
+
+      const cancel = document.createElement("button");
+      cancel.type = "button";
+      cancel.className = "participant-edit secondary";
+      cancel.textContent = t("cancel");
+      cancel.addEventListener("click", () => {
+        editingParticipantId = null;
+        render();
+      });
+
+      input.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+          saveParticipantName(participant.id, input.value);
+        }
+        if (event.key === "Escape") {
+          editingParticipantId = null;
+          render();
+        }
+      });
+
+      row.append(input, save, cancel);
+      participantsEl.append(row);
+      requestAnimationFrame(() => {
+        input.focus();
+        input.select();
+      });
+      return;
+    }
+
     const name = document.createElement("button");
     name.type = "button";
+    name.className = "participant-name";
     name.textContent = participant.name;
     name.addEventListener("click", () => {
       meeting.activeParticipantId = participant.id;
       saveAndRender();
     });
 
-    const remove = document.createElement("button");
-    remove.type = "button";
-    remove.setAttribute("aria-label", t("participantRemove", { name: participant.name }));
-    remove.textContent = "x";
-    remove.addEventListener("click", () => removeParticipant(participant.id));
+    const edit = document.createElement("button");
+    edit.type = "button";
+    edit.className = "participant-edit";
+    edit.setAttribute("aria-label", t("editParticipantAria", { name: participant.name }));
+    edit.textContent = t("editParticipant");
+    edit.addEventListener("click", () => editParticipantName(participant.id));
 
-    row.append(name, remove);
+    row.append(name, edit);
     participantsEl.append(row);
   });
 
@@ -950,16 +999,30 @@ function calendarImportError(error) {
   return messages[error] || t("importCalendarFailed");
 }
 
-function removeParticipant(id) {
+function editParticipantName(id) {
+  editingParticipantId = id;
+  render();
+}
+
+function saveParticipantName(id, rawName) {
   const meeting = getActiveMeeting();
   if (!meeting) {
     return;
   }
 
-  meeting.participants = meeting.participants.filter((participant) => participant.id !== id);
-  if (meeting.activeParticipantId === id) {
-    meeting.activeParticipantId = meeting.participants[0]?.id || null;
+  const participant = meeting.participants.find((item) => item.id === id);
+  if (!participant) {
+    return;
   }
+
+  const nextName = rawName.trim();
+  if (!nextName) {
+    return;
+  }
+
+  participant.name = nextName;
+  meeting.activeParticipantId = participant.id;
+  editingParticipantId = null;
   saveAndRender();
 }
 

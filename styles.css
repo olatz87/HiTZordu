@@ -221,7 +221,34 @@ h2 {
 .participant button {
   min-width: 34px;
   min-height: 32px;
-  color: var(--danger);
+}
+
+.participant-name {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.participant-edit {
+  flex: 0 0 auto;
+  min-width: 52px;
+  padding: 0 10px;
+  font-size: 0.82rem;
+}
+
+.participant-edit.secondary {
+  color: var(--muted);
+  background: #fff;
+}
+
+.participant-name-edit {
+  flex: 1;
+  min-width: 0;
 }
 
 .best-slots {
