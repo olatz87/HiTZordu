@@ -115,11 +115,15 @@ publikoa modelatzea izango litzateke.
 
 ## Google Calendar inportazioa
 
-Parte-hartzaile bakoitzak Google Calendar-eko embed edo public `.ics` esteka
+Parte-hartzaile bakoitzak Google Calendar-eko embed/newembed edo public `.ics` esteka
 bat itsatsi dezake. Zerbitzariak egutegia unean bertan irakurri, okupatutako
 tarteak kalkulatu, eta libre dauden slotak `Bai` gisa aurremarkatzen ditu.
 Okupatutako slotak hutsik uzten dira, eta erabiltzaileak gero eskuz aldatu
 ditzake.
+
+Inportazioa parte-hartzailearen ataleko `Google Calendarretik inportatu`
+botoiarekin egiten da. `Tarte onenak .ics gisa deskargatu` botoia beste gauza
+bat da: aukeratutako/emaitzako tarteak fitxategi gisa deskargatzeko.
 
 Funtzio honek data zehatzetako bileretan bakarrik funtzionatzen du. Egutegiak
 publikoa izan behar du; HiTZordu-k ez du Google OAuth tokenik edo egutegiaren

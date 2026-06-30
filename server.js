@@ -513,7 +513,7 @@ function calendarFeedUrls(value) {
     return [];
   }
 
-  if (url.pathname === "/calendar/embed") {
+  if (isGoogleCalendarEmbedPath(url.pathname)) {
     return url.searchParams.getAll("src")
       .map(decodeCalendarSource)
       .filter(Boolean)
@@ -525,6 +525,10 @@ function calendarFeedUrls(value) {
   }
 
   return [];
+}
+
+function isGoogleCalendarEmbedPath(pathname) {
+  return pathname === "/calendar/embed" || /^\/calendar\/u\/\d+\/(?:new)?embed$/.test(pathname);
 }
 
 function decodeCalendarSource(value) {

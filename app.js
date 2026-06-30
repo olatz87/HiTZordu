@@ -743,7 +743,7 @@ function calendarImportError(error) {
     calendar_feed_too_large: "Egutegia handiegia da.",
     dated_meeting_required: "Inportazioa data zehatzetako bileretan bakarrik dago erabilgarri.",
     invalid_calendar_feed: "Estekak ez du egutegi baliozkorik eman.",
-    unsupported_calendar_url: "Erabili Google Calendar embed edo public .ics esteka bat.",
+    unsupported_calendar_url: "Erabili Google Calendar embed/newembed edo public .ics esteka bat.",
   };
   return messages[error] || "Ezin izan da egutegia irakurri.";
 }
