@@ -3,11 +3,12 @@
 HiTZ ikerketa taldearentzat bilera-orduak adosteko aplikazioa.
 
 Hasierako helburua When2meet estiloko esperientzia sinplea eskaintzea da,
-baina bi hobekuntza nagusirekin:
+baina hainbat hobekuntza nagusirekin:
 
 - `if-need-be` egoera, parte-hartzaileek aukera bat posible baina ez ideala dela
   adierazteko.
-- Egutegira esportazioa, aukeratutako tarteak `.ics` fitxategi gisa gordetzeko.
+- Google Calendar esteka publikoetatik libre dauden tarteak aurremarkatzeko aukera.
+- Euskaraz eta ingelesez erabiltzeko interfazea.
 
 ## Martxan jartzea
 
@@ -57,6 +58,60 @@ Aplikazioa hemen irekiko da:
 http://127.0.0.1:3000
 ```
 
+## Zerbitzarian jartzea
+
+Zerbitzarian gomendatutako eredua:
+
+1. Klonatu errepositorioa eta instalatu dependentziak:
+
+```bash
+git clone git@github.com:olatz87/HiTZordu.git
+cd HiTZordu
+nvm use
+npm ci
+```
+
+2. Sortu `.env` fitxategia zerbitzarian bakarrik:
+
+```bash
+cp .env.example .env
+```
+
+Gutxienez hau bete:
+
+```bash
+HITZORDU_CREATE_TOKEN=token-luze-ausazkoa
+PORT=3000
+HOST=127.0.0.1
+HITZORDU_PUBLIC_BASE_URL=https://zure-domeinua
+```
+
+Email abisuak erabili nahi badira, konfiguratu `sendmail` bateragarri bat eta bete:
+
+```bash
+HITZORDU_SENDMAIL=/usr/sbin/sendmail
+HITZORDU_NOTIFY_FROM="HiTZordu <hitzordu@zure-domeinua>"
+```
+
+3. Probatu aplikazioa:
+
+```bash
+npm run start:env
+```
+
+4. Produkzioan, jarri prozesu-kudeatzaile baten atzean, adibidez `systemd`, eta
+reverse proxy batekin HTTPS azpian, adibidez Nginx edo Apache. Aplikazioa
+`127.0.0.1:3000`-n entzuten uztea gomendatzen da, eta kanpora reverse proxy-a
+bakarrik irekitzea.
+
+5. Datuak `data/store.json` fitxategian gordetzen dira. Ziurtatu:
+
+- aplikazioa exekutatzen duen erabiltzaileak `data/` karpetan idazteko baimena duela.
+- `data/store.json` backupetan sartzen dela.
+- `.env` ez dela GitHub-era igotzen.
+
+`data/*.json`, `.env` eta `node_modules/` `.gitignore`-n baztertuta daude.
+
 Garapenean fitxategi-aldaketekin serverra automatikoki berrabiarazteko:
 
 ```bash
@@ -94,8 +149,6 @@ aplikazioak datuak zerbitzarian gordeko ditu.
   - emaitza optimoak: denek `Bai` esandako blokeak.
   - aukera onenak: denek `Bai` edo `Behar izanez gero` esandako blokeak.
   - hurbilenak: aurrekoak ez daudenean, erantzun positibo gehien dituztenak.
-- Tarte onenak `.ics` fitxategi gisa esportatzea.
-  - Oraingoz esportazioa data zehatzetako bileretan bakarrik dago gaituta.
 - Datuak backend arinean gordetzea `data/store.json` fitxategian.
 - Backend gabe irekitzen bada, `localStorage` fallbacka erabiltzea.
 
@@ -122,8 +175,7 @@ Okupatutako slotak hutsik uzten dira, eta erabiltzaileak gero eskuz aldatu
 ditzake.
 
 Inportazioa parte-hartzailearen ataleko `Google Calendarretik inportatu`
-botoiarekin egiten da. `Tarte onenak .ics gisa deskargatu` botoia beste gauza
-bat da: aukeratutako/emaitzako tarteak fitxategi gisa deskargatzeko.
+botoiarekin egiten da.
 
 Funtzio honek data zehatzetako bileretan bakarrik funtzionatzen du. Egutegiak
 publikoa izan behar du; HiTZordu-k ez du Google OAuth tokenik edo egutegiaren
