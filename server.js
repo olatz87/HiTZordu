@@ -21,12 +21,14 @@ const staticFiles = new Map([
   ["/index.html", "index.html"],
   ["/styles.css", "styles.css"],
   ["/app.js", "app.js"],
+  ["/assets/hitz-logo.svg", "assets/hitz-logo.svg"],
 ]);
 
 const contentTypes = {
   ".css": "text/css; charset=utf-8",
   ".html": "text/html; charset=utf-8",
   ".js": "text/javascript; charset=utf-8",
+  ".svg": "image/svg+xml; charset=utf-8",
 };
 
 await ensureStoreFile();

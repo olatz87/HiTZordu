@@ -57,7 +57,6 @@ const weeklyChooser = document.querySelector("#weekly-chooser");
 const calendarTitle = document.querySelector("#calendar-title");
 const calendarGrid = document.querySelector("#calendar-grid");
 const weekdayChoices = document.querySelector("#weekday-choices");
-const exportButton = document.querySelector("#export-ics");
 const slotDetailsTitle = document.querySelector("#slot-details-title");
 const slotDetails = document.querySelector("#slot-details");
 const shareLink = document.querySelector("#share-link");
@@ -71,7 +70,6 @@ importCalendar.addEventListener("click", importCalendarAvailability);
 document.querySelector("#clear-meeting").addEventListener("click", clearActiveMeetingResponses);
 document.querySelector("#prev-month").addEventListener("click", () => changeCalendarMonth(-1));
 document.querySelector("#next-month").addEventListener("click", () => changeCalendarMonth(1));
-exportButton.addEventListener("click", exportCalendar);
 copyShareLink.addEventListener("click", copyCurrentShareLink);
 
 modeButtons.forEach((button) => {
@@ -174,7 +172,6 @@ function render() {
 
   if (meeting) {
     scheduleTitle.textContent = meeting.title;
-    exportButton.disabled = meeting.kind === "weekly";
     renderGrids(meeting);
   } else {
     personalGrid.innerHTML = "";
@@ -914,11 +911,6 @@ function slotScoreLabel(meeting, key) {
   return `${positiveResponses}/${meeting.participants.length}`;
 }
 
-function slotSummary(meeting, key) {
-  const summary = summarizeSlot(meeting, key);
-  return `${summary.available} bai, ${summary.maybe} behar izanez gero`;
-}
-
 function summarizeSlot(meeting, key) {
   return meeting.participants.reduce(
     (summary, participant) => {
@@ -996,50 +988,6 @@ function slotBlockKeys(meeting, key) {
 function formatSlotBlock(meeting, slot) {
   const endTimeLabel = minutesToTime(timeToMinutes(slot.key.split("T")[1]) + meeting.duration);
   return `${formatSlot(meeting, slot.key)}-${endTimeLabel}`;
-}
-
-function exportCalendar() {
-  const meeting = getActiveMeeting();
-  if (!meeting || meeting.kind === "weekly") {
-    return;
-  }
-
-  const selected = rankSlots(meeting).slice(0, 3);
-  if (selected.length === 0) {
-    return;
-  }
-
-  const events = selected.map((slot, index) => {
-    const start = parseLocalSlot(slot.key);
-    const end = new Date(start.getTime() + meeting.duration * 60 * 1000);
-    return [
-      "BEGIN:VEVENT",
-      `UID:${createId()}@hitzordu.local`,
-      `DTSTAMP:${toIcsDate(new Date())}`,
-      `DTSTART:${toIcsDate(start)}`,
-      `DTEND:${toIcsDate(end)}`,
-      `SUMMARY:${escapeIcsText(meeting.title)}${index > 0 ? ` aukera ${index + 1}` : ""}`,
-      `DESCRIPTION:${escapeIcsText(`${slot.available} bai, ${slot.maybe} behar izanez gero`)}`,
-      "END:VEVENT",
-    ].join("\r\n");
-  });
-
-  const calendar = [
-    "BEGIN:VCALENDAR",
-    "VERSION:2.0",
-    "PRODID:-//HiTZ//HiTZordu//EU",
-    "CALSCALE:GREGORIAN",
-    ...events,
-    "END:VCALENDAR",
-  ].join("\r\n");
-
-  const blob = new Blob([calendar], { type: "text/calendar;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = `${slugify(meeting.title)}.ics`;
-  link.click();
-  URL.revokeObjectURL(url);
 }
 
 function fillTimeSelects() {
@@ -1158,24 +1106,6 @@ function createCell(text, className) {
   return cell;
 }
 
-function parseLocalSlot(key) {
-  const [date, time] = key.split("T");
-  const [year, month, day] = date.split("-").map(Number);
-  const [hour, minute] = time.split(":").map(Number);
-  return new Date(year, month - 1, day, hour, minute);
-}
-
-function toIcsDate(date) {
-  return date
-    .toISOString()
-    .replace(/[-:]/g, "")
-    .replace(/\.\d{3}/, "");
-}
-
-function escapeIcsText(text) {
-  return text.replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\n/g, "\\n");
-}
-
 function formatSlot(meeting, key) {
   const [column, time] = key.split("T");
   const label = meeting.kind === "weekly"
@@ -1274,11 +1204,4 @@ function saveState() {
 function saveAndRender() {
   render();
   saveState();
-}
-
-function slugify(text) {
-  return text
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "") || "hitzordu";
 }

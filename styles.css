@@ -1,15 +1,17 @@
 :root {
-  --ink: #17202a;
-  --muted: #68717b;
-  --line: #d7dde2;
-  --page: #f7f8f5;
+  --ink: #161616;
+  --muted: #5e646b;
+  --line: #d9dde1;
+  --page: #f4f5f2;
   --panel: #ffffff;
-  --available: #1f8a70;
-  --maybe: #d49b24;
-  --unavailable: #d8dde2;
-  --accent: #315f7d;
-  --danger: #a94742;
-  --shadow: 0 18px 45px rgba(27, 39, 51, 0.12);
+  --available: #14846f;
+  --maybe: #d19a1d;
+  --unavailable: #dfe3e7;
+  --accent: #b3172d;
+  --accent-dark: #850f20;
+  --surface-soft: #f8f3f4;
+  --danger: #a3202d;
+  --shadow: 0 14px 32px rgba(22, 22, 22, 0.1);
 }
 
 * {
@@ -33,7 +35,7 @@ select {
 button {
   min-height: 40px;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 6px;
   color: var(--ink);
   background: #fff;
   cursor: pointer;
@@ -41,6 +43,13 @@ button {
 
 button:hover {
   border-color: var(--accent);
+}
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--accent) 32%, transparent);
+  outline-offset: 2px;
 }
 
 input,
@@ -74,12 +83,25 @@ label {
 
 .topbar {
   display: flex;
-  align-items: end;
+  align-items: center;
   justify-content: space-between;
   gap: 24px;
-  padding: 24px clamp(16px, 4vw, 48px);
-  border-bottom: 1px solid var(--line);
+  padding: 18px clamp(16px, 4vw, 48px);
+  border-bottom: 4px solid var(--accent);
   background: #fff;
+}
+
+.brand-lockup {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  min-width: 0;
+}
+
+.brand-logo {
+  width: clamp(92px, 14vw, 154px);
+  height: auto;
+  flex: 0 0 auto;
 }
 
 .eyebrow {
@@ -99,8 +121,8 @@ p {
 
 h1 {
   margin-bottom: 0;
-  font-size: clamp(2rem, 6vw, 4.4rem);
-  line-height: 0.95;
+  font-size: clamp(1.75rem, 4vw, 3.4rem);
+  line-height: 1;
 }
 
 h2 {
@@ -111,27 +133,44 @@ h2 {
 .top-actions {
   display: flex;
   justify-content: flex-end;
-  width: min(100%, 240px);
+  width: min(100%, 220px);
+}
+
+.top-actions button,
+.primary-action {
+  color: #fff;
+  border-color: var(--accent);
+  background: var(--accent);
+}
+
+.top-actions button:hover,
+.primary-action:hover {
+  border-color: var(--accent-dark);
+  background: var(--accent-dark);
 }
 
 .app-shell {
   display: grid;
-  grid-template-columns: minmax(260px, 320px) 1fr;
-  min-height: calc(100vh - 121px);
+  grid-template-columns: minmax(280px, 340px) minmax(0, 1fr);
+  min-height: calc(100vh - 100px);
 }
 
 .side-panel {
   display: grid;
   align-content: start;
-  gap: 18px;
+  gap: 16px;
   padding: 20px;
   border-right: 1px solid var(--line);
-  background: #fdfdfb;
+  background: #fbfbfa;
 }
 
 .panel-section {
   display: grid;
   gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
 }
 
 .participants {
@@ -157,7 +196,7 @@ h2 {
   min-height: 42px;
   padding: 8px 10px;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 6px;
   background: #fff;
 }
 
@@ -220,7 +259,7 @@ h2 {
   gap: 4px;
   padding: 10px;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 6px;
   background: #fff;
 }
 
@@ -242,18 +281,18 @@ h2 {
 .setup-panel,
 .schedule-panel {
   min-width: 0;
-  padding: 20px clamp(12px, 3vw, 36px) 36px;
+  padding: 22px clamp(12px, 3vw, 36px) 36px;
 }
 
 .setup-inner {
   display: grid;
   gap: 18px;
-  max-width: 760px;
+  max-width: 880px;
 }
 
 .setup-grid {
   display: grid;
-  grid-template-columns: 1.5fr repeat(3, minmax(120px, 1fr));
+  grid-template-columns: minmax(220px, 1.4fr) repeat(2, minmax(130px, 0.8fr));
   gap: 12px;
 }
 
@@ -265,7 +304,7 @@ h2 {
   padding: 4px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: #eef2f0;
+  background: #f0ecec;
 }
 
 .mode-switch button {
@@ -276,6 +315,7 @@ h2 {
 
 .mode-switch button.active {
   border-color: var(--accent);
+  color: var(--accent-dark);
   background: #fff;
 }
 
@@ -303,7 +343,7 @@ h2 {
   display: grid;
   grid-template-columns: repeat(7, minmax(38px, 1fr));
   gap: 6px;
-  max-width: 560px;
+  width: min(100%, 560px);
 }
 
 .calendar-weekday {
@@ -353,9 +393,6 @@ h2 {
 .primary-action {
   justify-self: start;
   min-width: 160px;
-  color: #fff;
-  border-color: var(--accent);
-  background: var(--accent);
 }
 
 .grid-toolbar {
@@ -408,13 +445,14 @@ h2 {
 
 .availability-layout {
   display: grid;
-  grid-template-columns: minmax(320px, 1fr) minmax(320px, 1fr);
+  grid-template-columns: repeat(2, minmax(280px, 1fr));
   gap: 18px;
   align-items: start;
 }
 
 .availability-column {
   min-width: 0;
+  overflow: hidden;
 }
 
 .availability-column h3 {
@@ -431,6 +469,8 @@ h2 {
   background: #fff;
   box-shadow: var(--shadow);
   user-select: none;
+  max-width: 100%;
+  scrollbar-color: var(--accent) #eceff1;
 }
 
 .grid-cell {
@@ -528,8 +568,41 @@ h2 {
   outline-offset: -3px;
 }
 
+@media (max-width: 1120px) {
+  .app-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .side-panel {
+    grid-template-columns: repeat(2, minmax(240px, 1fr));
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .panel-section:first-child {
+    grid-column: 1 / -1;
+  }
+
+  .availability-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (max-width: 780px) {
-  .topbar,
+  .topbar {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .brand-lockup {
+    align-items: flex-start;
+  }
+
+  .brand-logo {
+    width: 86px;
+  }
+
   .grid-toolbar {
     align-items: stretch;
     flex-direction: column;
@@ -537,14 +610,36 @@ h2 {
 
   .setup-grid,
   .mode-switch,
-  .availability-layout,
-  .app-shell {
+  .availability-layout {
     grid-template-columns: 1fr;
   }
 
   .side-panel {
-    border-right: 0;
-    border-bottom: 1px solid var(--line);
+    grid-template-columns: 1fr;
+    padding: 14px;
+  }
+
+  .panel-section:first-child {
+    grid-column: auto;
+  }
+
+  .setup-panel,
+  .schedule-panel {
+    padding: 16px 12px 28px;
+  }
+
+  .calendar-toolbar {
+    grid-template-columns: 40px 1fr 40px;
+    gap: 8px;
+  }
+
+  .calendar-grid {
+    gap: 4px;
+  }
+
+  .calendar-day,
+  .calendar-empty {
+    min-height: 36px;
   }
 
   .availability-grid {
@@ -559,5 +654,50 @@ h2 {
   .grid-cell.time,
   .grid-cell.corner {
     min-width: 52px;
+  }
+}
+
+@media (max-width: 480px) {
+  .brand-lockup {
+    gap: 12px;
+  }
+
+  .brand-logo {
+    width: 72px;
+  }
+
+  h1 {
+    font-size: 1.72rem;
+  }
+
+  .eyebrow {
+    font-size: 0.68rem;
+  }
+
+  .top-actions {
+    width: 100%;
+  }
+
+  .top-actions button,
+  .primary-action {
+    width: 100%;
+  }
+
+  .panel-section {
+    padding: 12px;
+  }
+
+  .availability-grid {
+    grid-template-columns: 48px repeat(var(--day-count, 1), minmax(86px, 1fr));
+  }
+
+  .grid-cell.header,
+  .slot {
+    min-width: 86px;
+  }
+
+  .grid-cell.time,
+  .grid-cell.corner {
+    min-width: 48px;
   }
 }
